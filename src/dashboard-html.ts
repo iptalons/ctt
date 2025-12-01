@@ -1352,7 +1352,7 @@ export const dashboardHTML = `<!DOCTYPE html>
         });
       });
 
-      // Build collaborating institutions data
+      // Build collaborating institutions data with citation tracking
       const institutionMap = {};
       work.authorships?.forEach(a => {
         a.institutions?.forEach(inst => {
@@ -1381,7 +1381,8 @@ export const dashboardHTML = `<!DOCTYPE html>
               name: instName,
               category: category,
               risk: risk,
-              country: country
+              country: country,
+              citations: work.cited_by_count // Add citation count
             };
           }
         });
@@ -1395,38 +1396,63 @@ export const dashboardHTML = `<!DOCTYPE html>
         (work.cited_by_count / yearsSincePublication).toFixed(2) :
         work.cited_by_count.toFixed(2);
 
-      // Generate network visualization with publication at center
-      const topInstitutions = institutions.slice(0, 15);
-      const centerX = 300;
-      const centerY = 200;
-      const radius = 150;
+      // Function to generate network visualization
+      const generateNetworkSVG = (filteredInsts) => {
+        const topInstitutions = filteredInsts.slice(0, 15);
+        const centerX = 300;
+        const centerY = 200;
+        const radius = 150;
 
-      let networkSVG = '';
-      topInstitutions.forEach((inst, i) => {
-        const angle = (i / topInstitutions.length) * 2 * Math.PI;
-        const x = centerX + radius * Math.cos(angle);
-        const y = centerY + radius * Math.sin(angle);
+        let svg = '';
 
-        // Node color based on risk
-        const nodeColor = inst.risk === 'high' ? '#dc3545' : inst.risk === 'medium' ? '#ffc107' : '#28a745';
-        const nodeSize = 12;
+        // Calculate min/max citations for scaling
+        const citationCounts = topInstitutions.map(i => i.citations);
+        const maxCitations = Math.max(...citationCounts);
+        const minCitations = Math.min(...citationCounts);
 
-        // Draw connection line
-        networkSVG += \`<line x1="\${centerX}" y1="\${centerY}" x2="\${x}" y2="\${y}" stroke="#ccc" stroke-width="1" opacity="0.5"/>\`;
+        topInstitutions.forEach((inst, i) => {
+          const angle = (i / topInstitutions.length) * 2 * Math.PI;
+          const x = centerX + radius * Math.cos(angle);
+          const y = centerY + radius * Math.sin(angle);
 
-        // Draw node
-        networkSVG += \`<circle cx="\${x}" cy="\${y}" r="\${nodeSize}" fill="\${nodeColor}" stroke="white" stroke-width="2"/>\`;
+          // Node color based on risk
+          const nodeColor = inst.risk === 'high' ? '#dc3545' : inst.risk === 'medium' ? '#ffc107' : '#28a745';
 
-        // Add label
-        const labelX = centerX + (radius + 30) * Math.cos(angle);
-        const labelY = centerY + (radius + 30) * Math.sin(angle);
-        const textAnchor = labelX > centerX ? 'start' : 'end';
-        networkSVG += \`<text x="\${labelX}" y="\${labelY}" text-anchor="\${textAnchor}" font-size="10" fill="#333">\${inst.name.substring(0, 20)}\${inst.name.length > 20 ? '...' : ''}</text>\`;
-      });
+          // Calculate node size based on citations (using square root for better visual scaling)
+          const minSize = 8;
+          const maxSize = 25;
+          const citationRange = maxCitations - minCitations;
+          const nodeSize = citationRange > 0
+            ? minSize + (Math.sqrt(inst.citations - minCitations + 1) / Math.sqrt(citationRange + 1)) * (maxSize - minSize)
+            : 12;
 
-      // Center node (publication)
-      networkSVG += \`<circle cx="\${centerX}" cy="\${centerY}" r="30" fill="#6B9E3E" stroke="white" stroke-width="3"/>\`;
-      networkSVG += \`<text x="\${centerX}" y="\${centerY}" text-anchor="middle" dominant-baseline="middle" font-size="12" fill="white" font-weight="bold">Publication</text>\`;
+          // Draw connection line
+          svg += \`<line x1="\${centerX}" y1="\${centerY}" x2="\${x}" y2="\${y}" stroke="#ccc" stroke-width="1" opacity="0.5"/>\`;
+
+          // Draw node with title for tooltip
+          svg += \`<circle cx="\${x}" cy="\${y}" r="\${nodeSize}" fill="\${nodeColor}" stroke="white" stroke-width="2">
+            <title>\${inst.name}\\nCitations: \${inst.citations.toLocaleString()}\\nRisk: \${inst.risk.toUpperCase()}</title>
+          </circle>\`;
+
+          // Add label
+          const labelX = centerX + (radius + 35) * Math.cos(angle);
+          const labelY = centerY + (radius + 35) * Math.sin(angle);
+          const textAnchor = labelX > centerX ? 'start' : 'end';
+          svg += \`<text x="\${labelX}" y="\${labelY}" text-anchor="\${textAnchor}" font-size="10" fill="#333">\${inst.name.substring(0, 20)}\${inst.name.length > 20 ? '...' : ''}</text>\`;
+        });
+
+        // Center node (publication)
+        svg += \`<circle cx="\${centerX}" cy="\${centerY}" r="30" fill="#6B9E3E" stroke="white" stroke-width="3"/>\`;
+        svg += \`<text x="\${centerX}" y="\${centerY}" text-anchor="middle" dominant-baseline="middle" font-size="12" fill="white" font-weight="bold">Publication</text>\`;
+
+        // Add legend for node sizing
+        svg += \`<text x="10" y="380" font-size="11" fill="#666">Node size = Citations</text>\`;
+
+        return svg;
+      };
+
+      // Generate initial network with all institutions
+      const initialNetworkSVG = generateNetworkSVG(institutions);
 
       const modalHTML = \`
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-bottom: 1.5rem;">
@@ -1444,12 +1470,13 @@ export const dashboardHTML = `<!DOCTYPE html>
           </div>
         </div>
 
-        <!-- Risk Level Legend -->
-        <div style="display: flex; gap: 0.5rem; margin-bottom: 1.5rem; justify-content: center;">
-          <span style="padding: 0.5rem 1rem; background: #dc3545; color: white; border-radius: 4px; font-size: 0.85rem; font-weight: 600;">VERY HIGH</span>
-          <span style="padding: 0.5rem 1rem; background: #ff6b6b; color: white; border-radius: 4px; font-size: 0.85rem; font-weight: 600;">HIGH</span>
-          <span style="padding: 0.5rem 1rem; background: #ffc107; color: white; border-radius: 4px; font-size: 0.85rem; font-weight: 600;">MEDIUM</span>
-          <span style="padding: 0.5rem 1rem; background: #90EE90; color: #333; border-radius: 4px; font-size: 0.85rem; font-weight: 600;">LOW</span>
+        <!-- Risk Level Filter (Clickable) -->
+        <div style="display: flex; gap: 0.5rem; margin-bottom: 1.5rem; justify-content: center; align-items: center;">
+          <span style="color: #666; font-size: 0.9rem; font-weight: 600; margin-right: 0.5rem;">Filter by Risk:</span>
+          <span id="riskFilter_all" onclick="filterPublicationNetwork('all')" style="padding: 0.5rem 1rem; background: #6B9E3E; color: white; border-radius: 4px; font-size: 0.85rem; font-weight: 600; cursor: pointer; border: 3px solid #6B9E3E;">ALL</span>
+          <span id="riskFilter_high" onclick="filterPublicationNetwork('high')" style="padding: 0.5rem 1rem; background: #ff6b6b; color: white; border-radius: 4px; font-size: 0.85rem; font-weight: 600; cursor: pointer; border: 3px solid transparent;">HIGH</span>
+          <span id="riskFilter_medium" onclick="filterPublicationNetwork('medium')" style="padding: 0.5rem 1rem; background: #ffc107; color: white; border-radius: 4px; font-size: 0.85rem; font-weight: 600; cursor: pointer; border: 3px solid transparent;">MEDIUM</span>
+          <span id="riskFilter_low" onclick="filterPublicationNetwork('low')" style="padding: 0.5rem 1rem; background: #90EE90; color: #333; border-radius: 4px; font-size: 0.85rem; font-weight: 600; cursor: pointer; border: 3px solid transparent;">LOW</span>
         </div>
 
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
@@ -1522,8 +1549,8 @@ export const dashboardHTML = `<!DOCTYPE html>
 
           <!-- Right Side: Network Visualization -->
           <div style="background: #f8f9fa; border-radius: 8px; padding: 1rem;">
-            <svg width="100%" height="450" viewBox="0 0 600 400" style="background: white; border-radius: 4px;">
-              \${networkSVG}
+            <svg id="publicationNetworkSVG" width="100%" height="450" viewBox="0 0 600 400" style="background: white; border-radius: 4px;">
+              \${initialNetworkSVG}
             </svg>
           </div>
         </div>
@@ -1547,6 +1574,10 @@ export const dashboardHTML = `<!DOCTYPE html>
       document.getElementById('modalTitle').style.color = '#6B9E3E';
       document.getElementById('modalBody').innerHTML = modalHTML;
       document.getElementById('detailModal').classList.add('active');
+
+      // Store institutions data and generator function in window for filtering
+      window.publicationInstitutions = institutions;
+      window.generatePublicationNetworkSVG = generateNetworkSVG;
     }
 
     function showFunderDetail(funderName) {
@@ -2048,6 +2079,35 @@ export const dashboardHTML = `<!DOCTYPE html>
 
     function closeModal() {
       document.getElementById('detailModal').classList.remove('active');
+    }
+
+    function filterPublicationNetwork(riskLevel) {
+      // Update filter button styles
+      ['all', 'high', 'medium', 'low'].forEach(level => {
+        const btn = document.getElementById('riskFilter_' + level);
+        if (btn) {
+          if (level === riskLevel) {
+            btn.style.border = '3px solid ' + (level === 'all' ? '#6B9E3E' : level === 'high' ? '#ff6b6b' : level === 'medium' ? '#ffc107' : '#90EE90');
+          } else {
+            btn.style.border = '3px solid transparent';
+          }
+        }
+      });
+
+      // Filter institutions based on risk level
+      const allInstitutions = window.publicationInstitutions || [];
+      const filteredInstitutions = riskLevel === 'all'
+        ? allInstitutions
+        : allInstitutions.filter(inst => inst.risk === riskLevel);
+
+      // Regenerate network SVG with filtered institutions
+      if (window.generatePublicationNetworkSVG) {
+        const newSVG = window.generatePublicationNetworkSVG(filteredInstitutions);
+        const svgElement = document.getElementById('publicationNetworkSVG');
+        if (svgElement) {
+          svgElement.innerHTML = newSVG;
+        }
+      }
     }
 
     function exportData() {
