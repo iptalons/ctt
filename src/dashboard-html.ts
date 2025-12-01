@@ -1927,24 +1927,6 @@ export const dashboardHTML = `<!DOCTYPE html>
       const avgCitations = relatedPubs.length > 0 ? Math.round(totalCitations / relatedPubs.length) : 0;
 
       const modalHTML = \`
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-bottom: 2rem;">
-          <!-- Institution Info Card -->
-          <div style="border: 3px solid #007bff; border-radius: 8px; padding: 1.5rem; text-align: center; background: white;">
-            <div style="color: #666; font-size: 0.9rem; font-weight: 600; margin-bottom: 0.5rem;">US INSTITUTION:</div>
-            <div style="color: #007bff; font-size: 1.5rem; font-weight: bold;">
-              \${usInstitution?.type || 'University'}
-            </div>
-          </div>
-
-          <!-- Publications Card -->
-          <div style="border: 3px solid var(--iptalons-green); border-radius: 8px; padding: 1.5rem; text-align: center; background: white;">
-            <div style="color: #666; font-size: 0.9rem; font-weight: 600; margin-bottom: 0.5rem;">TOTAL COLLABORATIONS:</div>
-            <div style="color: var(--iptalons-green); font-size: 2rem; font-weight: bold;">
-              \${relatedPubs.length}
-            </div>
-          </div>
-        </div>
-
         <!-- Filter Controls -->
         <div style="margin-bottom: 2rem; padding: 1rem; background: #f8f9fa; border-radius: 4px; display: flex; align-items: center; justify-content: space-between;">
           <div style="font-weight: 600; color: #333;">
