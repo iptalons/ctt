@@ -10,7 +10,7 @@ import { SearchParams } from '../models/types';
 /**
  * Handle search request
  */
-export async function handleSearch(request: Request): Promise<Response> {
+export async function handleSearch(request: Request, env?: any): Promise<Response> {
   const url = new URL(request.url);
   const params = url.searchParams;
 

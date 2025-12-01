@@ -15,6 +15,7 @@ import { dashboardHTML } from './dashboard-html';
 export interface Env {
   ENVIRONMENT?: string;
   CACHE?: KVNamespace;
+  CN_FIGS_KV?: KVNamespace;
 }
 
 /**
@@ -34,7 +35,7 @@ export default {
     try {
       // API routes
       if (path === '/api/search') {
-        return await handleSearch(request);
+        return await handleSearch(request, env);
       }
 
       if (path === '/api/sectors') {

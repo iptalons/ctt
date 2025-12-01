@@ -3,10 +3,11 @@ main = "src/index.ts"
 compatibility_date = "2024-01-01"
 compatibility_flags = ["nodejs_compat"]
 
-# KV namespace for caching (optional)
-# [[kv_namespaces]]
-# binding = "CACHE"
-# id = "your-kv-namespace-id"
+# KV namespace for CN_FIGs data
+[[kv_namespaces]]
+binding = "CN_FIGS_KV"
+id = "placeholder_will_be_created"
+preview_id = "placeholder_will_be_created"
 
 [vars]
 ENVIRONMENT = "production"
@@ -14,3 +15,6 @@ ENVIRONMENT = "production"
 # For local development
 [env.dev]
 vars = { ENVIRONMENT = "development" }
+[[env.dev.kv_namespaces]]
+binding = "CN_FIGS_KV"
+id = "placeholder_will_be_created"

@@ -1458,6 +1458,45 @@ export const dashboardHTML = `<!DOCTYPE html>
           </div>
         </div>
 
+        <!-- Network Visualization -->
+        <div style="margin-top: 2rem;">
+          <h4 style="color: var(--iptalons-green); margin-bottom: 1rem; border-bottom: 2px solid var(--iptalons-green); padding-bottom: 0.5rem;">
+            <i class="fas fa-project-diagram"></i> Collaboration Network
+          </h4>
+          <div id="networkChart-\${Date.now()}" style="background: white; border-radius: 8px; padding: 1rem; height: 400px; position: relative; overflow: hidden;">
+            <svg width="100%" height="100%" style="display: block;">
+              <!-- Central node (FIG) -->
+              <circle cx="50%" cy="50%" r="30" fill="\${funder.risk_level === 'high' ? '#dc3545' : funder.risk_level === 'medium' ? '#ffc107' : '#6B9E3E'}" stroke="#333" stroke-width="2"/>
+              <text x="50%" y="50%" text-anchor="middle" dominant-baseline="middle" fill="white" font-size="10" font-weight="bold">FIG</text>
+
+              <!-- Connected institutions (circular layout) -->
+              \${topInstitutions.slice(0, 12).map((inst, idx) => {
+                const angle = (idx * 2 * Math.PI) / Math.min(topInstitutions.length, 12);
+                const radius = 150;
+                const centerX = 50; // percentage
+                const centerY = 50; // percentage
+                const x = centerX + radius * Math.cos(angle - Math.PI / 2);
+                const y = centerY + radius * Math.sin(angle - Math.PI / 2);
+                const color = inst.country === 'CN' ? '#dc3545' : '#007bff';
+                const size = Math.min(15, 8 + inst.publications);
+
+                return \`
+                  <!-- Connection line -->
+                  <line x1="50%" y1="50%" x2="\${x}%" y2="\${y}%" stroke="#ddd" stroke-width="1" opacity="0.5"/>
+                  <!-- Institution node -->
+                  <circle cx="\${x}%" cy="\${y}%" r="\${size}" fill="\${color}" stroke="#333" stroke-width="1" opacity="0.9"/>
+                  <title>\${inst.name} (\${inst.publications} pubs)</title>
+                \`;
+              }).join('')}
+            </svg>
+            <div style="position: absolute; top: 10px; right: 10px; background: white; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px; font-size: 0.8rem;">
+              <div><span style="display: inline-block; width: 12px; height: 12px; background: #dc3545; border-radius: 50%; margin-right: 5px;"></span>Chinese Institution</div>
+              <div style="margin-top: 3px;"><span style="display: inline-block; width: 12px; height: 12px; background: #007bff; border-radius: 50%; margin-right: 5px;"></span>US Institution</div>
+              <div style="margin-top: 3px;"><span style="display: inline-block; width: 12px; height: 12px; background: var(--iptalons-green); border-radius: 50%; margin-right: 5px;"></span>Central FIG</div>
+            </div>
+          </div>
+        </div>
+
         <!-- Summary Stats -->
         <div style="margin-top: 2rem; padding: 1.5rem; background: #f8f9fa; border-radius: 8px; border-left: 4px solid var(--iptalons-green);">
           <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; text-align: center;">
