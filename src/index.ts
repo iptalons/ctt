@@ -10,6 +10,7 @@ import {
   handleHealthCheck,
   handleOptions
 } from './handlers/api';
+import { dashboardHTML } from './dashboard-html';
 
 export interface Env {
   ENVIRONMENT?: string;
@@ -78,12 +79,24 @@ export default {
  * Serve the main HTML page
  */
 function serveHTML(): Response {
+  return new Response(dashboardHTML, {
+    headers: {
+      'Content-Type': 'text/html',
+      'Cache-Control': 'public, max-age=3600'
+    }
+  });
+}
+
+// Legacy function for reference (replaced by imported dashboard HTML)
+function serveHTMLOld(): Response {
   const html = `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Critical Tech Tracker - US-China Research Collaborations</title>
+  <title>Critical Tech Tracker - US-China Research Collaborations Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
     * {
       margin: 0;
