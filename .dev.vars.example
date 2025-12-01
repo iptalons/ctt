@@ -1,0 +1,6 @@
+# Local development environment variables
+# Copy this file to .dev.vars and fill in your values
+
+# Optional: Your email for OpenAlex polite pool (faster rate limits)
+# OpenAlex doesn't require authentication, but adding your email gives you better rate limits
+OPENALEX_EMAIL=your-email@example.com
