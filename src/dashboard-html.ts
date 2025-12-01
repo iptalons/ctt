@@ -1992,11 +1992,22 @@ export const dashboardHTML = `<!DOCTYPE html>
                 const x = centerX + radius * Math.cos(angle - Math.PI / 2);
                 const y = centerY + radius * Math.sin(angle - Math.PI / 2);
 
-                // Risk-based color (traffic light colors)
-                const color = inst.risk === 'veryhigh' ? '#8B0000' :  // Dark red
-                              inst.risk === 'high' ? '#dc3545' :      // Red
-                              inst.risk === 'medium' ? '#ffc107' :    // Yellow
-                              '#28a745';                               // Green (low risk)
+                // Color based on country and risk
+                let color;
+                let riskLabel;
+                if (inst.country === 'US') {
+                  color = '#007bff';  // Blue for US institutions
+                  riskLabel = 'US';
+                } else {
+                  // Risk-based color for Chinese institutions (traffic light colors)
+                  color = inst.risk === 'veryhigh' ? '#8B0000' :  // Dark red
+                          inst.risk === 'high' ? '#dc3545' :      // Red
+                          inst.risk === 'medium' ? '#ffc107' :    // Yellow
+                          '#28a745';                               // Green (low risk)
+                  riskLabel = inst.risk === 'veryhigh' ? 'VERY HIGH' :
+                              inst.risk === 'high' ? 'HIGH' :
+                              inst.risk === 'medium' ? 'MEDIUM' : 'LOW';
+                }
 
                 // Size based on citations
                 const minSize = 8;
@@ -2009,10 +2020,6 @@ export const dashboardHTML = `<!DOCTYPE html>
                 const labelRadius = radius + 25 + (size - minSize) / 2;
                 const labelX = centerX + labelRadius * Math.cos(angle - Math.PI / 2);
                 const labelY = centerY + labelRadius * Math.sin(angle - Math.PI / 2);
-
-                const riskLabel = inst.risk === 'veryhigh' ? 'VERY HIGH' :
-                                  inst.risk === 'high' ? 'HIGH' :
-                                  inst.risk === 'medium' ? 'MEDIUM' : 'LOW';
 
                 return \`
                   <line x1="\${centerX}" y1="\${centerY}" x2="\${x}" y2="\${y}" stroke="#ddd" stroke-width="2" opacity="0.4"/>
@@ -2046,8 +2053,10 @@ export const dashboardHTML = `<!DOCTYPE html>
 
             <!-- Legend -->
             <div style="position: absolute; top: 10px; right: 10px; background: white; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px; font-size: 0.8rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-              <div style="font-weight: 600; margin-bottom: 5px; color: #333;">Risk Level</div>
-              <div><span style="display: inline-block; width: 12px; height: 12px; background: #8B0000; border-radius: 50%; margin-right: 5px;"></span>Very High</div>
+              <div style="font-weight: 600; margin-bottom: 5px; color: #333;">Legend</div>
+              <div><span style="display: inline-block; width: 12px; height: 12px; background: #007bff; border-radius: 50%; margin-right: 5px;"></span>US Institution</div>
+              <div style="margin-top: 8px; padding-top: 5px; border-top: 1px solid #ddd; font-weight: 600; color: #333;">Risk Level (CN)</div>
+              <div style="margin-top: 3px;"><span style="display: inline-block; width: 12px; height: 12px; background: #8B0000; border-radius: 50%; margin-right: 5px;"></span>Very High</div>
               <div style="margin-top: 3px;"><span style="display: inline-block; width: 12px; height: 12px; background: #dc3545; border-radius: 50%; margin-right: 5px;"></span>High</div>
               <div style="margin-top: 3px;"><span style="display: inline-block; width: 12px; height: 12px; background: #ffc107; border-radius: 50%; margin-right: 5px;"></span>Medium</div>
               <div style="margin-top: 3px;"><span style="display: inline-block; width: 12px; height: 12px; background: #28a745; border-radius: 50%; margin-right: 5px;"></span>Low</div>
