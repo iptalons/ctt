@@ -645,9 +645,9 @@ export const dashboardHTML = `<!DOCTYPE html>
           <input type="number" id="minCitations" name="minCitations" placeholder="10" min="0" value="10">
         </div>
 
-        <div class="form-group" style="display: flex; align-items: flex-end;">
+        <div class="form-group" style="display: none;">
           <button type="submit" class="btn btn-primary" id="searchBtn" style="width: 100%;">
-            <i class="fas fa-search"></i> Search Collaborations
+            <i class="fas fa-sync-alt"></i> Refresh Results
           </button>
         </div>
       </form>
@@ -793,8 +793,31 @@ export const dashboardHTML = `<!DOCTYPE html>
           const option = document.createElement('option');
           option.value = sector.id;
           option.textContent = sector.name;
+          // Set Next-Generation IT as default
+          if (sector.id === 'next_gen_it') {
+            option.selected = true;
+          }
           select.appendChild(option);
         });
+
+        // Add event listeners for auto-search on any form change
+        select.addEventListener('change', () => {
+          performSearch();
+        });
+
+        // Add event listeners to year and citation inputs
+        document.getElementById('yearFrom').addEventListener('change', () => {
+          performSearch();
+        });
+        document.getElementById('yearTo').addEventListener('change', () => {
+          performSearch();
+        });
+        document.getElementById('minCitations').addEventListener('change', () => {
+          performSearch();
+        });
+
+        // Auto-load with default sector on page load
+        setTimeout(() => performSearch(), 500);
       } catch (error) {
         console.error('Failed to load sectors:', error);
       }
@@ -1215,11 +1238,8 @@ export const dashboardHTML = `<!DOCTYPE html>
       }
     });
 
-    // Load sectors on page load
+    // Load sectors and auto-run search on page load
     loadSectors();
-
-    // Auto-run search with defaults on page load (optional)
-    // setTimeout(() => performSearch(), 500);
   </script>
 </body>
 </html>`;
