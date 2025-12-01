@@ -1613,7 +1613,7 @@ export const dashboardHTML = `<!DOCTYPE html>
         .sort((a, b) => b.publications - a.publications)
         .slice(0, 10);
 
-      // Extract collaborating institutions
+      // Extract collaborating institutions with risk assessment
       const institutionMap = {};
       relatedPubs.forEach(r => {
         r.work.authorships?.forEach(a => {
@@ -1623,10 +1623,31 @@ export const dashboardHTML = `<!DOCTYPE html>
 
             if (country === 'CN' || country === 'US') {
               if (!institutionMap[instName]) {
+                // Determine risk level for Chinese institutions
+                let risk = 'low';
+                if (country === 'CN') {
+                  const instLower = instName.toLowerCase();
+                  // Very High Risk: Military, Defense, PLA
+                  if (instLower.includes('military') || instLower.includes('pla') ||
+                      instLower.includes('defense') || instLower.includes('strategic')) {
+                    risk = 'veryhigh';
+                  }
+                  // High Risk: Government, State agencies, National programs
+                  else if (instLower.includes('academy of sciences') || instLower.includes('ministry') ||
+                           instLower.includes('state key') || instLower.includes('national')) {
+                    risk = 'high';
+                  }
+                  // Medium Risk: Other Chinese institutions
+                  else {
+                    risk = 'medium';
+                  }
+                }
+
                 institutionMap[instName] = {
                   name: instName,
                   country: country,
                   type: inst.type || 'University',
+                  risk: risk,
                   publications: 0,
                   citations: 0
                 };
@@ -1712,7 +1733,23 @@ export const dashboardHTML = `<!DOCTYPE html>
                 const centerY = 250; // center of 500px height
                 const x = centerX + radius * Math.cos(angle - Math.PI / 2);
                 const y = centerY + radius * Math.sin(angle - Math.PI / 2);
-                const color = inst.country === 'CN' ? '#dc3545' : '#007bff';
+
+                // Color based on country and risk
+                let color;
+                let riskLabel;
+                if (inst.country === 'US') {
+                  color = '#007bff';  // Blue for US institutions
+                  riskLabel = 'US';
+                } else {
+                  // Risk-based color for Chinese institutions (traffic light colors)
+                  color = inst.risk === 'veryhigh' ? '#8B0000' :  // Dark red
+                          inst.risk === 'high' ? '#dc3545' :      // Red
+                          inst.risk === 'medium' ? '#ffc107' :    // Yellow
+                          '#28a745';                               // Green (low risk)
+                  riskLabel = inst.risk === 'veryhigh' ? 'VERY HIGH' :
+                              inst.risk === 'high' ? 'HIGH' :
+                              inst.risk === 'medium' ? 'MEDIUM' : 'LOW';
+                }
 
                 // Enhanced size scaling based on CITATIONS (better metric than publications)
                 // Use square root scale for better visual distinction
@@ -1736,7 +1773,7 @@ export const dashboardHTML = `<!DOCTYPE html>
                   <line x1="\${centerX}" y1="\${centerY}" x2="\${x}" y2="\${y}" stroke="#ddd" stroke-width="2" opacity="0.4"/>
                   <!-- Institution node -->
                   <circle cx="\${x}" cy="\${y}" r="\${size}" fill="\${color}" stroke="#333" stroke-width="2" opacity="0.85">
-                    <title>\${inst.name}\\n\${inst.citations.toLocaleString()} citations | \${inst.publications} publications</title>
+                    <title>\${inst.name}\\n\${inst.citations.toLocaleString()} citations | \${inst.publications} publications\\nRisk: \${riskLabel}</title>
                   </circle>
                   <!-- Institution label -->
                   <text x="\${labelX}" y="\${labelY}" text-anchor="middle" class="inst-label" fill="#333">
@@ -1779,9 +1816,12 @@ export const dashboardHTML = `<!DOCTYPE html>
             <!-- Legend -->
             <div style="position: absolute; top: 10px; right: 10px; background: white; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px; font-size: 0.8rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
               <div style="font-weight: 600; margin-bottom: 5px; color: #333;">Legend</div>
-              <div><span style="display: inline-block; width: 12px; height: 12px; background: #dc3545; border-radius: 50%; margin-right: 5px;"></span>Chinese Institution</div>
-              <div style="margin-top: 3px;"><span style="display: inline-block; width: 12px; height: 12px; background: #007bff; border-radius: 50%; margin-right: 5px;"></span>US Institution</div>
-              <div style="margin-top: 3px;"><span style="display: inline-block; width: 12px; height: 12px; background: \${funder.risk_level === 'high' ? '#dc3545' : funder.risk_level === 'medium' ? '#ffc107' : '#6B9E3E'}; border-radius: 50%; margin-right: 5px;"></span>Central FIG</div>
+              <div><span style="display: inline-block; width: 12px; height: 12px; background: #007bff; border-radius: 50%; margin-right: 5px;"></span>US Institution</div>
+              <div style="margin-top: 8px; padding-top: 5px; border-top: 1px solid #ddd; font-weight: 600; color: #333;">Risk Level (CN)</div>
+              <div style="margin-top: 3px;"><span style="display: inline-block; width: 12px; height: 12px; background: #8B0000; border-radius: 50%; margin-right: 5px;"></span>Very High</div>
+              <div style="margin-top: 3px;"><span style="display: inline-block; width: 12px; height: 12px; background: #dc3545; border-radius: 50%; margin-right: 5px;"></span>High</div>
+              <div style="margin-top: 3px;"><span style="display: inline-block; width: 12px; height: 12px; background: #ffc107; border-radius: 50%; margin-right: 5px;"></span>Medium</div>
+              <div style="margin-top: 3px;"><span style="display: inline-block; width: 12px; height: 12px; background: #28a745; border-radius: 50%; margin-right: 5px;"></span>Low</div>
               <div style="margin-top: 8px; padding-top: 5px; border-top: 1px solid #ddd; font-size: 0.75rem; color: #666;">Node size = citations</div>
             </div>
 
