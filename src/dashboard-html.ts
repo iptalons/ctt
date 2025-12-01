@@ -75,26 +75,6 @@ export const dashboardHTML = `<!DOCTYPE html>
       width: auto;
     }
 
-    .nav-menu {
-      display: flex;
-      gap: 2rem;
-      list-style: none;
-      margin: 0;
-      padding: 0;
-    }
-
-    .nav-menu a {
-      color: var(--gray-700);
-      text-decoration: none;
-      font-size: 0.95rem;
-      font-weight: 500;
-      transition: color 0.2s;
-    }
-
-    .nav-menu a:hover {
-      color: var(--iptalons-green);
-    }
-
     .header-actions {
       display: flex;
       gap: 0.75rem;
@@ -582,10 +562,6 @@ export const dashboardHTML = `<!DOCTYPE html>
         height: auto;
         top: 0;
       }
-
-      .nav-menu {
-        display: none;
-      }
     }
 
     @media (max-width: 768px) {
@@ -627,17 +603,6 @@ export const dashboardHTML = `<!DOCTYPE html>
              class="logo-img"
              onerror="this.onerror=null; this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 150 40%22%3E%3Ctext x=%2210%22 y=%2228%22 font-family=%22Arial%22 font-size=%2220%22 font-weight=%22bold%22 fill=%22%236B9E3E%22%3EIPTalons%3C/text%3E%3C/svg%3E'">
       </div>
-      <nav>
-        <ul class="nav-menu">
-          <li><a href="#home">Home</a></li>
-          <li><a href="#who-we-are">Who We Are</a></li>
-          <li><a href="#services">Services</a></li>
-          <li><a href="#use-cases">Use Cases</a></li>
-          <li><a href="#education">Education</a></li>
-          <li><a href="#insights">Insights</a></li>
-          <li><a href="#contact">Contact</a></li>
-        </ul>
-      </nav>
       <div class="header-actions">
         <button class="btn btn-primary" onclick="exportData()">
           <i class="fas fa-download"></i> Export Report
@@ -753,10 +718,28 @@ export const dashboardHTML = `<!DOCTYPE html>
 
         <div class="chart-card">
           <div class="chart-header">
-            <div class="chart-title"><i class="fas fa-medal"></i> Top Institutions</div>
+            <div class="chart-title"><i class="fas fa-building"></i> Top Chinese Institutions</div>
           </div>
           <div class="chart-container">
             <canvas id="institutionsChart"></canvas>
+          </div>
+        </div>
+
+        <div class="chart-card">
+          <div class="chart-header">
+            <div class="chart-title"><i class="fas fa-university"></i> Top US Institutions</div>
+          </div>
+          <div class="chart-container">
+            <canvas id="usInstitutionsChart"></canvas>
+          </div>
+        </div>
+
+        <div class="chart-card">
+          <div class="chart-header">
+            <div class="chart-title"><i class="fas fa-calendar-alt"></i> Publications by Year</div>
+          </div>
+          <div class="chart-container">
+            <canvas id="yearDistributionChart"></canvas>
           </div>
         </div>
       </section>
@@ -1113,6 +1096,73 @@ export const dashboardHTML = `<!DOCTYPE html>
           },
           scales: {
             x: { beginAtZero: true }
+          }
+        }
+      });
+
+      // US Institutions Chart
+      const usInstCounts = {};
+      data.results.forEach(r => {
+        r.us_institutions.slice(0, 2).forEach(inst => {
+          usInstCounts[inst.display_name] = (usInstCounts[inst.display_name] || 0) + 1;
+        });
+      });
+      const topUSInsts = Object.entries(usInstCounts)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 10);
+
+      charts.usInstitutions = new Chart(document.getElementById('usInstitutionsChart'), {
+        type: 'bar',
+        data: {
+          labels: topUSInsts.map(i => i[0].length > 30 ? i[0].substring(0, 30) + '...' : i[0]),
+          datasets: [{
+            label: 'Publications',
+            data: topUSInsts.map(i => i[1]),
+            backgroundColor: '#6B9E3E'
+          }]
+        },
+        options: {
+          indexAxis: 'y',
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false }
+          },
+          scales: {
+            x: { beginAtZero: true }
+          }
+        }
+      });
+
+      // Publications by Year Chart
+      const yearCounts = {};
+      data.results.forEach(r => {
+        const year = r.work.publication_year;
+        if (year) {
+          yearCounts[year] = (yearCounts[year] || 0) + 1;
+        }
+      });
+      const yearData = Object.entries(yearCounts)
+        .sort((a, b) => parseInt(a[0]) - parseInt(b[0]));
+
+      charts.yearDistribution = new Chart(document.getElementById('yearDistributionChart'), {
+        type: 'bar',
+        data: {
+          labels: yearData.map(y => y[0]),
+          datasets: [{
+            label: 'Publications',
+            data: yearData.map(y => y[1]),
+            backgroundColor: '#6B9E3E'
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false }
+          },
+          scales: {
+            y: { beginAtZero: true }
           }
         }
       });
