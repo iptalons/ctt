@@ -1482,13 +1482,21 @@ export const dashboardHTML = `<!DOCTYPE html>
                 const x = centerX + radius * Math.cos(angle - Math.PI / 2);
                 const y = centerY + radius * Math.sin(angle - Math.PI / 2);
                 const color = inst.country === 'CN' ? '#dc3545' : '#007bff';
-                const size = Math.min(18, 10 + inst.publications * 2);
+
+                // Enhanced size scaling based on collaboration count
+                // Use logarithmic scale for better visual distinction
+                // Size ranges from 8px (1 pub) to 30px (many pubs)
+                const minSize = 8;
+                const maxSize = 30;
+                const scaleFactor = 4; // Controls growth rate
+                const scaledSize = minSize + Math.sqrt(inst.publications) * scaleFactor;
+                const size = Math.min(maxSize, Math.max(minSize, scaledSize));
 
                 // Shorten institution name for display
                 const shortName = inst.name.length > 25 ? inst.name.substring(0, 22) + '...' : inst.name;
 
-                // Position label outside the circle
-                const labelRadius = radius + 30;
+                // Position label outside the circle (adjust for varying node sizes)
+                const labelRadius = radius + 25 + (size - minSize) / 2;
                 const labelX = centerX + labelRadius * Math.cos(angle - Math.PI / 2);
                 const labelY = centerY + labelRadius * Math.sin(angle - Math.PI / 2);
 
@@ -1497,7 +1505,7 @@ export const dashboardHTML = `<!DOCTYPE html>
                   <line x1="\${centerX}" y1="\${centerY}" x2="\${x}" y2="\${y}" stroke="#ddd" stroke-width="2" opacity="0.4"/>
                   <!-- Institution node -->
                   <circle cx="\${x}" cy="\${y}" r="\${size}" fill="\${color}" stroke="#333" stroke-width="2" opacity="0.85">
-                    <title>\${inst.name} (\${inst.publications} publications)</title>
+                    <title>\${inst.name} (\${inst.publications} publications, \${inst.citations.toLocaleString()} citations)</title>
                   </circle>
                   <!-- Institution label -->
                   <text x="\${labelX}" y="\${labelY}" text-anchor="middle" class="inst-label" fill="#333">
