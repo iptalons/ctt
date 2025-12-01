@@ -1398,7 +1398,110 @@ export const dashboardHTML = `<!DOCTYPE html>
           <div style="flex: 1; background: #28a745; color: white; padding: 0.5rem; text-align: center; border-radius: 4px; font-weight: 600;">LOW</div>
         </div>
 
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+        <!-- Network Visualization -->
+        <div style="margin-top: 2rem;">
+          <h4 style="color: var(--iptalons-green); margin-bottom: 1rem; border-bottom: 2px solid var(--iptalons-green); padding-bottom: 0.5rem;">
+            <i class="fas fa-project-diagram"></i> Collaboration Network
+          </h4>
+          <div id="networkChart-\${Date.now()}" style="background: white; border-radius: 8px; padding: 1rem; height: 500px; position: relative; overflow: hidden;">
+            <svg width="100%" height="100%" style="display: block;" viewBox="0 0 800 500">
+              <!-- Define text for wrapping -->
+              <defs>
+                <style>
+                  .inst-label { font-size: 9px; font-family: Arial, sans-serif; }
+                  .central-label { font-size: 11px; font-weight: bold; font-family: Arial, sans-serif; fill: white; }
+                </style>
+              </defs>
+
+              <!-- Connected institutions (circular layout) -->
+              \${topInstitutions.slice(0, 15).map((inst, idx) => {
+                const angle = (idx * 2 * Math.PI) / Math.min(topInstitutions.length, 15);
+                const radius = 180;
+                const centerX = 400; // center of 800px width
+                const centerY = 250; // center of 500px height
+                const x = centerX + radius * Math.cos(angle - Math.PI / 2);
+                const y = centerY + radius * Math.sin(angle - Math.PI / 2);
+                const color = inst.country === 'CN' ? '#dc3545' : '#007bff';
+
+                // Enhanced size scaling based on CITATIONS (better metric than publications)
+                // Use square root scale for better visual distinction
+                // Size ranges from 8px (low citations) to 30px (high citations)
+                const minSize = 8;
+                const maxSize = 30;
+                const scaleFactor = 0.15; // Controls growth rate for citations
+                const scaledSize = minSize + Math.sqrt(inst.citations) * scaleFactor;
+                const size = Math.min(maxSize, Math.max(minSize, scaledSize));
+
+                // Shorten institution name for display
+                const shortName = inst.name.length > 25 ? inst.name.substring(0, 22) + '...' : inst.name;
+
+                // Position label outside the circle (adjust for varying node sizes)
+                const labelRadius = radius + 25 + (size - minSize) / 2;
+                const labelX = centerX + labelRadius * Math.cos(angle - Math.PI / 2);
+                const labelY = centerY + labelRadius * Math.sin(angle - Math.PI / 2);
+
+                return \`
+                  <!-- Connection line -->
+                  <line x1="\${centerX}" y1="\${centerY}" x2="\${x}" y2="\${y}" stroke="#ddd" stroke-width="2" opacity="0.4"/>
+                  <!-- Institution node -->
+                  <circle cx="\${x}" cy="\${y}" r="\${size}" fill="\${color}" stroke="#333" stroke-width="2" opacity="0.85">
+                    <title>\${inst.name}\\n\${inst.citations.toLocaleString()} citations | \${inst.publications} publications</title>
+                  </circle>
+                  <!-- Institution label -->
+                  <text x="\${labelX}" y="\${labelY}" text-anchor="middle" class="inst-label" fill="#333">
+                    \${shortName}
+                  </text>
+                \`;
+              }).join('')}
+
+              <!-- Central node (FIG) - Draw last so it's on top -->
+              <circle cx="400" cy="250" r="45" fill="\${funder.risk_level === 'high' ? '#dc3545' : funder.risk_level === 'medium' ? '#ffc107' : '#6B9E3E'}" stroke="#333" stroke-width="3"/>
+
+              <!-- FIG name in center (wrap if needed) -->
+              \${(() => {
+                // Create abbreviation or short name for the FIG
+                const figName = funderName;
+                let displayName = figName;
+
+                // Common abbreviations
+                if (figName.includes('National Natural Science Foundation')) {
+                  displayName = 'NSFC';
+                } else if (figName.includes('Ministry of Science and Technology')) {
+                  displayName = 'MOST';
+                } else if (figName.includes('Chinese Academy of Sciences')) {
+                  displayName = 'CAS';
+                } else if (figName.length > 30) {
+                  // Abbreviate long names
+                  const words = figName.split(' ');
+                  if (words.length > 3) {
+                    displayName = words.slice(0, 3).join(' ') + '...';
+                  } else {
+                    displayName = figName.substring(0, 25) + '...';
+                  }
+                }
+
+                return \`<text x="400" y="250" text-anchor="middle" dominant-baseline="middle" class="central-label">\${displayName}</text>\`;
+              })()}
+
+            </svg>
+
+            <!-- Legend -->
+            <div style="position: absolute; top: 10px; right: 10px; background: white; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px; font-size: 0.8rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+              <div style="font-weight: 600; margin-bottom: 5px; color: #333;">Legend</div>
+              <div><span style="display: inline-block; width: 12px; height: 12px; background: #dc3545; border-radius: 50%; margin-right: 5px;"></span>Chinese Institution</div>
+              <div style="margin-top: 3px;"><span style="display: inline-block; width: 12px; height: 12px; background: #007bff; border-radius: 50%; margin-right: 5px;"></span>US Institution</div>
+              <div style="margin-top: 3px;"><span style="display: inline-block; width: 12px; height: 12px; background: \${funder.risk_level === 'high' ? '#dc3545' : funder.risk_level === 'medium' ? '#ffc107' : '#6B9E3E'}; border-radius: 50%; margin-right: 5px;"></span>Central FIG</div>
+              <div style="margin-top: 8px; padding-top: 5px; border-top: 1px solid #ddd; font-size: 0.75rem; color: #666;">Node size = citations</div>
+            </div>
+
+            <!-- FIG Full Name Display -->
+            <div style="position: absolute; bottom: 10px; left: 10px; right: 10px; background: #f8f9fa; padding: 0.75rem; border-radius: 4px; border-left: 4px solid var(--iptalons-green); font-size: 0.85rem;">
+              <strong>Central Node:</strong> \${funderName}
+            </div>
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-top: 2rem;">
           <!-- Top Researchers -->
           <div>
             <h4 style="color: var(--iptalons-green); margin-bottom: 1rem; border-bottom: 2px solid var(--iptalons-green); padding-bottom: 0.5rem;">
@@ -1454,108 +1557,6 @@ export const dashboardHTML = `<!DOCTYPE html>
                   \`).join('')}
                 </tbody>
               </table>
-            </div>
-          </div>
-        </div>
-
-        <!-- Network Visualization -->
-        <div style="margin-top: 2rem;">
-          <h4 style="color: var(--iptalons-green); margin-bottom: 1rem; border-bottom: 2px solid var(--iptalons-green); padding-bottom: 0.5rem;">
-            <i class="fas fa-project-diagram"></i> Collaboration Network
-          </h4>
-          <div id="networkChart-\${Date.now()}" style="background: white; border-radius: 8px; padding: 1rem; height: 500px; position: relative; overflow: hidden;">
-            <svg width="100%" height="100%" style="display: block;" viewBox="0 0 800 500">
-              <!-- Define text for wrapping -->
-              <defs>
-                <style>
-                  .inst-label { font-size: 9px; font-family: Arial, sans-serif; }
-                  .central-label { font-size: 11px; font-weight: bold; font-family: Arial, sans-serif; fill: white; }
-                </style>
-              </defs>
-
-              <!-- Connected institutions (circular layout) -->
-              \${topInstitutions.slice(0, 15).map((inst, idx) => {
-                const angle = (idx * 2 * Math.PI) / Math.min(topInstitutions.length, 15);
-                const radius = 180;
-                const centerX = 400; // center of 800px width
-                const centerY = 250; // center of 500px height
-                const x = centerX + radius * Math.cos(angle - Math.PI / 2);
-                const y = centerY + radius * Math.sin(angle - Math.PI / 2);
-                const color = inst.country === 'CN' ? '#dc3545' : '#007bff';
-
-                // Enhanced size scaling based on collaboration count
-                // Use logarithmic scale for better visual distinction
-                // Size ranges from 8px (1 pub) to 30px (many pubs)
-                const minSize = 8;
-                const maxSize = 30;
-                const scaleFactor = 4; // Controls growth rate
-                const scaledSize = minSize + Math.sqrt(inst.publications) * scaleFactor;
-                const size = Math.min(maxSize, Math.max(minSize, scaledSize));
-
-                // Shorten institution name for display
-                const shortName = inst.name.length > 25 ? inst.name.substring(0, 22) + '...' : inst.name;
-
-                // Position label outside the circle (adjust for varying node sizes)
-                const labelRadius = radius + 25 + (size - minSize) / 2;
-                const labelX = centerX + labelRadius * Math.cos(angle - Math.PI / 2);
-                const labelY = centerY + labelRadius * Math.sin(angle - Math.PI / 2);
-
-                return \`
-                  <!-- Connection line -->
-                  <line x1="\${centerX}" y1="\${centerY}" x2="\${x}" y2="\${y}" stroke="#ddd" stroke-width="2" opacity="0.4"/>
-                  <!-- Institution node -->
-                  <circle cx="\${x}" cy="\${y}" r="\${size}" fill="\${color}" stroke="#333" stroke-width="2" opacity="0.85">
-                    <title>\${inst.name} (\${inst.publications} publications, \${inst.citations.toLocaleString()} citations)</title>
-                  </circle>
-                  <!-- Institution label -->
-                  <text x="\${labelX}" y="\${labelY}" text-anchor="middle" class="inst-label" fill="#333">
-                    \${shortName}
-                  </text>
-                \`;
-              }).join('')}
-
-              <!-- Central node (FIG) - Draw last so it's on top -->
-              <circle cx="400" cy="250" r="45" fill="\${funder.risk_level === 'high' ? '#dc3545' : funder.risk_level === 'medium' ? '#ffc107' : '#6B9E3E'}" stroke="#333" stroke-width="3"/>
-
-              <!-- FIG name in center (wrap if needed) -->
-              \${(() => {
-                // Create abbreviation or short name for the FIG
-                const figName = funderName;
-                let displayName = figName;
-
-                // Common abbreviations
-                if (figName.includes('National Natural Science Foundation')) {
-                  displayName = 'NSFC';
-                } else if (figName.includes('Ministry of Science and Technology')) {
-                  displayName = 'MOST';
-                } else if (figName.includes('Chinese Academy of Sciences')) {
-                  displayName = 'CAS';
-                } else if (figName.length > 30) {
-                  // Abbreviate long names
-                  const words = figName.split(' ');
-                  if (words.length > 3) {
-                    displayName = words.slice(0, 3).join(' ') + '...';
-                  } else {
-                    displayName = figName.substring(0, 25) + '...';
-                  }
-                }
-
-                return \`<text x="400" y="250" text-anchor="middle" dominant-baseline="middle" class="central-label">\${displayName}</text>\`;
-              })()}
-
-            </svg>
-
-            <!-- Legend -->
-            <div style="position: absolute; top: 10px; right: 10px; background: white; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px; font-size: 0.8rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-              <div style="font-weight: 600; margin-bottom: 5px; color: #333;">Legend</div>
-              <div><span style="display: inline-block; width: 12px; height: 12px; background: #dc3545; border-radius: 50%; margin-right: 5px;"></span>Chinese Institution</div>
-              <div style="margin-top: 3px;"><span style="display: inline-block; width: 12px; height: 12px; background: #007bff; border-radius: 50%; margin-right: 5px;"></span>US Institution</div>
-              <div style="margin-top: 3px;"><span style="display: inline-block; width: 12px; height: 12px; background: \${funder.risk_level === 'high' ? '#dc3545' : funder.risk_level === 'medium' ? '#ffc107' : '#6B9E3E'}; border-radius: 50%; margin-right: 5px;"></span>Central FIG</div>
-            </div>
-
-            <!-- FIG Full Name Display -->
-            <div style="position: absolute; bottom: 10px; left: 10px; right: 10px; background: #f8f9fa; padding: 0.75rem; border-radius: 4px; border-left: 4px solid var(--iptalons-green); font-size: 0.85rem;">
-              <strong>Central Node:</strong> \${funderName}
             </div>
           </div>
         </div>
