@@ -132,6 +132,6 @@ export interface ChineseForeignInfluenceGroup {
   funding_count: number;
   related_works: string[];
   sectors: string[];
-  risk_level: 'high' | 'medium' | 'low';
+  risk_level: 'high' | 'medium' | 'low' | 'unknown';
   description?: string;
 }

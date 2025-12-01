@@ -1,193 +1,172 @@
 /**
  * Funder Classification Module
- * Identifies and classifies Chinese funding organizations
+ * Identifies and classifies Chinese funding organizations using CN_FIGs.csv data
  */
 
 import { ChineseForeignInfluenceGroup } from '../models/types';
+import { getCNFigByName, CN_FIGS_ARRAY, CNFigEntry } from '../data/cn-figs-data';
+import { findBestMatch, normalizeInstitutionName, containsKeyword } from './fuzzy-match';
 
 /**
- * Known Chinese government and military-linked funding organizations
+ * Map CN_FIGs risk rating to our risk level type
  */
-export const KNOWN_CHINESE_FUNDERS: Record<string, ChineseForeignInfluenceGroup> = {
-  'nsfc': {
-    name: 'National Natural Science Foundation of China (NSFC)',
-    type: 'government',
-    funding_count: 0,
-    related_works: [],
-    sectors: [],
-    risk_level: 'high',
-    description: 'Primary government agency for basic research funding in China'
-  },
-  'most': {
-    name: 'Ministry of Science and Technology (MOST)',
-    type: 'government',
-    funding_count: 0,
-    related_works: [],
-    sectors: [],
-    risk_level: 'high',
-    description: 'Chinese government ministry overseeing science and technology development'
-  },
-  'cas': {
-    name: 'Chinese Academy of Sciences (CAS)',
-    type: 'government',
-    funding_count: 0,
-    related_works: [],
-    sectors: [],
-    risk_level: 'high',
-    description: 'State-run comprehensive research and development organization'
-  },
-  'ndrc': {
-    name: 'National Development and Reform Commission (NDRC)',
-    type: 'government',
-    funding_count: 0,
-    related_works: [],
-    sectors: [],
-    risk_level: 'high',
-    description: 'Macroeconomic management agency under the State Council'
-  },
-  'miit': {
-    name: 'Ministry of Industry and Information Technology (MIIT)',
-    type: 'government',
-    funding_count: 0,
-    related_works: [],
-    sectors: [],
-    risk_level: 'high',
-    description: 'Regulator and supervisor of China\'s industrial and information technology sectors'
-  },
-  'pla': {
-    name: 'People\'s Liberation Army (PLA) - Related Funding',
-    type: 'military',
-    funding_count: 0,
-    related_works: [],
-    sectors: [],
-    risk_level: 'high',
-    description: 'Military-linked research funding'
-  },
-  'cmse': {
-    name: 'Commission on Military-Civil Fusion',
-    type: 'military',
-    funding_count: 0,
-    related_works: [],
-    sectors: [],
-    risk_level: 'high',
-    description: 'Organization promoting military-civil fusion strategy'
-  },
-  'sastind': {
-    name: 'State Administration for Science, Technology and Industry for National Defense (SASTIND)',
-    type: 'military',
-    funding_count: 0,
-    related_works: [],
-    sectors: [],
-    risk_level: 'high',
-    description: 'Manages defense science, technology and industry'
+function mapRiskRating(rating: 'HIGH' | 'MEDIUM' | 'LOW'): 'high' | 'medium' | 'low' {
+  return rating.toLowerCase() as 'high' | 'medium' | 'low';
+}
+
+/**
+ * Map CN_FIGs kind to our funder type
+ */
+function mapKindToType(kind: string): 'government' | 'military' | 'state-owned' | 'university' | 'private' | 'unknown' {
+  const lowerKind = kind.toLowerCase();
+
+  if (lowerKind.includes('military') || lowerKind === 'seven sons') {
+    return 'military';
   }
-};
+  if (lowerKind.includes('defence') || lowerKind.includes('defense')) {
+    return 'state-owned';
+  }
+  if (lowerKind === 'civilian' || lowerKind.includes('university') || lowerKind.includes('college')) {
+    return 'university';
+  }
+  if (lowerKind.includes('government') || lowerKind.includes('ministry') || lowerKind.includes('commission')) {
+    return 'government';
+  }
+
+  return 'unknown';
+}
 
 /**
- * Keywords and patterns to identify Chinese government/military funders
+ * Lookup institution in CN_FIGs database with fuzzy matching
  */
-const CHINESE_GOV_PATTERNS = [
+export function lookupCNFig(institutionName: string): {
+  entry: CNFigEntry;
+  matchType: 'exact' | 'fuzzy';
+  score?: number;
+} | null {
+  // Try exact match first
+  const exactMatch = getCNFigByName(institutionName);
+  if (exactMatch) {
+    return {
+      entry: exactMatch,
+      matchType: 'exact'
+    };
+  }
+
+  // Try fuzzy match with 70% threshold
+  const fuzzyMatch = findBestMatch(
+    institutionName,
+    CN_FIGS_ARRAY,
+    (item) => item.institution,
+    0.7
+  );
+
+  if (fuzzyMatch) {
+    return {
+      entry: fuzzyMatch.match,
+      matchType: 'fuzzy',
+      score: fuzzyMatch.score
+    };
+  }
+
+  return null;
+}
+
+/**
+ * Pattern-based keywords for general Chinese funding detection
+ * Used as fallback when institution not in CN_FIGs database
+ */
+const CHINESE_FUNDING_KEYWORDS = [
   // Government agencies
-  /national.*natural.*science.*foundation.*china/i,
-  /nsfc/i,
-  /ministry.*science.*technology/i,
-  /chinese.*academy.*sciences/i,
-  /\bcas\b/i,
-  /national.*development.*reform/i,
-  /\bndrc\b/i,
-  /ministry.*industry.*information/i,
-  /\bmiit\b/i,
-  /state.*council/i,
+  'nsfc', 'national natural science foundation of china',
+  'most', 'ministry of science and technology',
+  'cas', 'chinese academy of sciences',
+  'ndrc', 'national development and reform',
+  'miit', 'ministry of industry and information',
+  'state council',
 
-  // Military and defense
-  /people.*liberation.*army/i,
-  /\bpla\b/i,
-  /military.*civil.*fusion/i,
-  /national.*defense/i,
-  /sastind/i,
-  /commission.*military/i,
+  // Programs
+  '973 program', '863 program',
+  'thousand talents', 'national key r&d',
+  'torch program', 'spark program',
 
-  // State-owned enterprises
-  /china.*national.*corporation/i,
-  /state.*grid/i,
-  /sinopec/i,
-  /petrochina/i,
-  /aviation.*industry.*corporation/i,
-  /\bavic\b/i,
-  /china.*aerospace/i,
-  /casc/i,
-  /china.*shipbuilding/i,
-  /cssc/i,
-  /china.*electronics/i,
-  /cetc/i,
+  // Provincial/Municipal
+  'provincial science', 'municipal science',
 
-  // Provincial government
-  /provincial.*science.*technology/i,
-  /municipal.*science.*technology/i,
-
-  // National programs
-  /973.*program/i,
-  /863.*program/i,
-  /thousand.*talents/i,
-  /national.*key.*r.*d/i,
-  /torch.*program/i,
-  /spark.*program/i,
-  /climbing.*program/i
+  // Generic Chinese indicators
+  'china national', 'chinese academy'
 ];
 
 /**
  * Check if a funder name indicates Chinese government/military affiliation
+ * Returns risk level or 'UNKNOWN' if found in patterns but not in database
  */
-export function isChineseGovernmentFunder(funderName: string): boolean {
-  return CHINESE_GOV_PATTERNS.some(pattern => pattern.test(funderName));
+export function assessInstitutionRisk(
+  institutionName: string
+): 'high' | 'medium' | 'low' | 'unknown' {
+  // Try CN_FIGs database first
+  const cnFig = lookupCNFig(institutionName);
+  if (cnFig) {
+    return mapRiskRating(cnFig.entry.riskRating);
+  }
+
+  // Check if it matches general Chinese funding keywords
+  if (containsKeyword(institutionName, CHINESE_FUNDING_KEYWORDS)) {
+    // Found in general patterns but not in database - return 'unknown'
+    return 'unknown';
+  }
+
+  // Check if it's Chinese based on name
+  if (isChineseByName(institutionName)) {
+    return 'unknown';
+  }
+
+  // Not Chinese or not identifiable
+  return 'unknown';
 }
 
 /**
- * Classify funder type based on name
+ * Classify funder type based on CN_FIGs data or patterns
  */
 export function classifyFunderType(
-  funderName: string
+  institutionName: string
 ): 'government' | 'military' | 'state-owned' | 'university' | 'private' | 'unknown' {
-  const lowerName = funderName.toLowerCase();
+  // Try CN_FIGs database first
+  const cnFig = lookupCNFig(institutionName);
+  if (cnFig && cnFig.entry.kind) {
+    return mapKindToType(cnFig.entry.kind);
+  }
 
-  // Military-related
+  // Fallback to pattern matching
+  const lowerName = institutionName.toLowerCase();
+
   if (
     lowerName.includes('pla') ||
     lowerName.includes('military') ||
     lowerName.includes('defense') ||
-    lowerName.includes('sastind')
+    lowerName.includes('defence')
   ) {
     return 'military';
   }
 
-  // Government agencies
   if (
     lowerName.includes('ministry') ||
     lowerName.includes('commission') ||
     lowerName.includes('administration') ||
-    lowerName.includes('state council') ||
-    lowerName.includes('nsfc') ||
-    lowerName.includes('natural science foundation') ||
-    lowerName.includes('provincial') ||
-    lowerName.includes('municipal')
+    lowerName.includes('state council')
   ) {
     return 'government';
   }
 
-  // State-owned enterprises
   if (
     lowerName.includes('state grid') ||
     lowerName.includes('sinopec') ||
     lowerName.includes('petrochina') ||
-    lowerName.includes('china national') ||
-    lowerName.includes('aviation industry') ||
-    lowerName.includes('aerospace') ||
-    lowerName.includes('shipbuilding')
+    lowerName.includes('china national corporation')
   ) {
     return 'state-owned';
   }
 
-  // Universities
   if (
     lowerName.includes('university') ||
     lowerName.includes('college') ||
@@ -200,47 +179,19 @@ export function classifyFunderType(
 }
 
 /**
- * Assess risk level of a funder
+ * Check if institution name suggests Chinese origin
  */
-export function assessFunderRiskLevel(
-  funderType: string,
-  funderName: string
-): 'high' | 'medium' | 'low' {
-  const lowerName = funderName.toLowerCase();
+function isChineseByName(institutionName: string): boolean {
+  const lowerName = institutionName.toLowerCase();
+  const chineseIndicators = [
+    'china', 'chinese', 'beijing', 'shanghai', 'shenzhen',
+    'guangzhou', 'tsinghua', 'peking', 'fudan', 'zhejiang',
+    'nanjing', 'wuhan', 'xi\'an', 'chengdu', 'tianjin',
+    'harbin', 'dalian', 'qingdao', 'jiangsu', 'shandong',
+    'cas', 'nsfc', 'most', 'miit'
+  ];
 
-  // High risk: Military and key government agencies
-  if (
-    funderType === 'military' ||
-    lowerName.includes('pla') ||
-    lowerName.includes('military-civil fusion') ||
-    lowerName.includes('national defense')
-  ) {
-    return 'high';
-  }
-
-  // High risk: Strategic government funders
-  if (
-    lowerName.includes('nsfc') ||
-    lowerName.includes('most') ||
-    lowerName.includes('miit') ||
-    lowerName.includes('ndrc') ||
-    lowerName.includes('state council')
-  ) {
-    return 'high';
-  }
-
-  // Medium risk: State-owned enterprises and CAS
-  if (
-    funderType === 'state-owned' ||
-    lowerName.includes('chinese academy of sciences') ||
-    lowerName.includes('provincial') ||
-    lowerName.includes('municipal')
-  ) {
-    return 'medium';
-  }
-
-  // Low risk: Universities and private (if not strategic)
-  return 'low';
+  return chineseIndicators.some(indicator => lowerName.includes(indicator));
 }
 
 /**
@@ -256,10 +207,15 @@ export function extractChineseFunders(grants: any[]): ChineseForeignInfluenceGro
   grants.forEach(grant => {
     const funderName = grant.funder_display_name || grant.funder || '';
 
-    // Check if it's a Chinese funder
-    if (isChineseGovernmentFunder(funderName) || funderName.toLowerCase().includes('china')) {
+    if (!funderName) return;
+
+    // Check if it's Chinese
+    const riskLevel = assessInstitutionRisk(funderName);
+
+    // Only include if we detected it as Chinese
+    if (riskLevel !== 'unknown' || isChineseByName(funderName)) {
       const funderType = classifyFunderType(funderName);
-      const riskLevel = assessFunderRiskLevel(funderType, funderName);
+      const cnFig = lookupCNFig(funderName);
 
       chineseFunders.push({
         name: funderName,
@@ -268,12 +224,60 @@ export function extractChineseFunders(grants: any[]): ChineseForeignInfluenceGro
         related_works: [grant.award_id || ''],
         sectors: [],
         risk_level: riskLevel,
-        description: `Funding through grant: ${grant.award_id || 'N/A'}`
+        description: cnFig
+          ? `${cnFig.entry.kind || 'N/A'} (${cnFig.matchType} match${cnFig.score ? `, ${Math.round(cnFig.score * 100)}% confidence` : ''})`
+          : `Detected via pattern matching`
       });
     }
   });
 
   return chineseFunders;
+}
+
+/**
+ * Extract Chinese institutions from a work's authorships
+ */
+export function extractChineseInstitutions(authorships: any[]): Array<{
+  name: string;
+  riskLevel: 'high' | 'medium' | 'low' | 'unknown';
+  type: string;
+  cnFigData?: CNFigEntry;
+}> {
+  if (!authorships || authorships.length === 0) {
+    return [];
+  }
+
+  const institutions: Array<{
+    name: string;
+    riskLevel: 'high' | 'medium' | 'low' | 'unknown';
+    type: string;
+    cnFigData?: CNFigEntry;
+  }> = [];
+
+  authorships.forEach(authorship => {
+    if (!authorship.institutions) return;
+
+    authorship.institutions.forEach((institution: any) => {
+      const instName = institution.display_name || '';
+      const countryCode = institution.country_code || '';
+
+      // Only process Chinese institutions
+      if (countryCode === 'CN' || isChineseByName(instName)) {
+        const riskLevel = assessInstitutionRisk(instName);
+        const funderType = classifyFunderType(instName);
+        const cnFig = lookupCNFig(instName);
+
+        institutions.push({
+          name: instName,
+          riskLevel: riskLevel,
+          type: funderType,
+          cnFigData: cnFig?.entry
+        });
+      }
+    });
+  });
+
+  return institutions;
 }
 
 /**
@@ -285,7 +289,7 @@ export function aggregateFunders(
   const funderMap = new Map<string, ChineseForeignInfluenceGroup>();
 
   allFunders.forEach(funder => {
-    const key = funder.name.toLowerCase();
+    const key = normalizeInstitutionName(funder.name);
 
     if (funderMap.has(key)) {
       const existing = funderMap.get(key)!;
@@ -311,17 +315,5 @@ export function isChineseInstitution(institutionName: string, countryCode?: stri
     return true;
   }
 
-  const lowerName = institutionName.toLowerCase();
-  return (
-    lowerName.includes('china') ||
-    lowerName.includes('chinese') ||
-    lowerName.includes('beijing') ||
-    lowerName.includes('shanghai') ||
-    lowerName.includes('shenzhen') ||
-    lowerName.includes('guangzhou') ||
-    lowerName.includes('tsinghua') ||
-    lowerName.includes('peking university') ||
-    lowerName.includes('fudan') ||
-    lowerName.includes('zhejiang')
-  );
+  return isChineseByName(institutionName);
 }
