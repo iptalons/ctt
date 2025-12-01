@@ -1399,9 +1399,9 @@ export const dashboardHTML = `<!DOCTYPE html>
       // Function to generate network visualization
       const generateNetworkSVG = (filteredInsts) => {
         const topInstitutions = filteredInsts.slice(0, 15);
-        const centerX = 300;
-        const centerY = 200;
-        const radius = 150;
+        const centerX = 600;  // Center of 1200 width
+        const centerY = 250;  // Center of 500 height
+        const radius = 200;   // Larger radius for wider display
 
         let svg = '';
 
@@ -1419,15 +1419,15 @@ export const dashboardHTML = `<!DOCTYPE html>
           const nodeColor = inst.risk === 'high' ? '#dc3545' : inst.risk === 'medium' ? '#ffc107' : '#28a745';
 
           // Calculate node size based on citations (using square root for better visual scaling)
-          const minSize = 8;
-          const maxSize = 25;
+          const minSize = 10;
+          const maxSize = 30;
           const citationRange = maxCitations - minCitations;
           const nodeSize = citationRange > 0
             ? minSize + (Math.sqrt(inst.citations - minCitations + 1) / Math.sqrt(citationRange + 1)) * (maxSize - minSize)
-            : 12;
+            : 15;
 
           // Draw connection line
-          svg += \`<line x1="\${centerX}" y1="\${centerY}" x2="\${x}" y2="\${y}" stroke="#ccc" stroke-width="1" opacity="0.5"/>\`;
+          svg += \`<line x1="\${centerX}" y1="\${centerY}" x2="\${x}" y2="\${y}" stroke="#ccc" stroke-width="2" opacity="0.5"/>\`;
 
           // Draw node with title for tooltip
           svg += \`<circle cx="\${x}" cy="\${y}" r="\${nodeSize}" fill="\${nodeColor}" stroke="white" stroke-width="2">
@@ -1435,18 +1435,18 @@ export const dashboardHTML = `<!DOCTYPE html>
           </circle>\`;
 
           // Add label
-          const labelX = centerX + (radius + 35) * Math.cos(angle);
-          const labelY = centerY + (radius + 35) * Math.sin(angle);
+          const labelX = centerX + (radius + 45) * Math.cos(angle);
+          const labelY = centerY + (radius + 45) * Math.sin(angle);
           const textAnchor = labelX > centerX ? 'start' : 'end';
-          svg += \`<text x="\${labelX}" y="\${labelY}" text-anchor="\${textAnchor}" font-size="10" fill="#333">\${inst.name.substring(0, 20)}\${inst.name.length > 20 ? '...' : ''}</text>\`;
+          svg += \`<text x="\${labelX}" y="\${labelY}" text-anchor="\${textAnchor}" font-size="12" fill="#333" font-weight="500">\${inst.name.substring(0, 25)}\${inst.name.length > 25 ? '...' : ''}</text>\`;
         });
 
         // Center node (publication)
-        svg += \`<circle cx="\${centerX}" cy="\${centerY}" r="30" fill="#6B9E3E" stroke="white" stroke-width="3"/>\`;
-        svg += \`<text x="\${centerX}" y="\${centerY}" text-anchor="middle" dominant-baseline="middle" font-size="12" fill="white" font-weight="bold">Publication</text>\`;
+        svg += \`<circle cx="\${centerX}" cy="\${centerY}" r="40" fill="#6B9E3E" stroke="white" stroke-width="3"/>\`;
+        svg += \`<text x="\${centerX}" y="\${centerY}" text-anchor="middle" dominant-baseline="middle" font-size="14" fill="white" font-weight="bold">Publication</text>\`;
 
         // Add legend for node sizing
-        svg += \`<text x="10" y="380" font-size="11" fill="#666">Node size = Citations</text>\`;
+        svg += \`<text x="20" y="480" font-size="13" fill="#666" font-weight="500">Node size = Citations</text>\`;
 
         return svg;
       };
@@ -1479,79 +1479,77 @@ export const dashboardHTML = `<!DOCTYPE html>
           <span id="riskFilter_low" onclick="filterPublicationNetwork('low')" style="padding: 0.5rem 1rem; background: #90EE90; color: #333; border-radius: 4px; font-size: 0.85rem; font-weight: 600; cursor: pointer; border: 3px solid transparent;">LOW</span>
         </div>
 
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
-          <!-- Left Side: Tables -->
-          <div style="display: grid; gap: 1.5rem; grid-template-rows: auto auto;">
-            <!-- Authors & Affiliations Table -->
-            <div style="background: #f8f9fa; border-radius: 8px; padding: 1rem;">
-              <h4 style="color: #6B9E3E; margin-bottom: 1rem; font-size: 1rem;">Authors & Affiliations</h4>
-              <div style="overflow-x: auto;">
-                <table style="width: 100%; font-size: 0.85rem; background: white; border-collapse: collapse;">
-                  <thead style="background: #6B9E3E; color: white;">
-                    <tr>
-                      <th style="padding: 0.5rem; text-align: left; border: 1px solid #ddd;">Author</th>
-                      <th style="padding: 0.5rem; text-align: left; border: 1px solid #ddd;">Institution</th>
-                      <th style="padding: 0.5rem; text-align: left; border: 1px solid #ddd;">Country</th>
-                      <th style="padding: 0.5rem; text-align: left; border: 1px solid #ddd;">Risk</th>
-                      <th style="padding: 0.5rem; text-align: left; border: 1px solid #ddd;">Details</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    \${authorsData.slice(0, 10).map(a => \`
-                      <tr>
-                        <td style="padding: 0.5rem; border: 1px solid #ddd;">\${a.author.substring(0, 20)}\${a.author.length > 20 ? '...' : ''}</td>
-                        <td style="padding: 0.5rem; border: 1px solid #ddd;">\${a.institution.substring(0, 25)}\${a.institution.length > 25 ? '...' : ''}</td>
-                        <td style="padding: 0.5rem; border: 1px solid #ddd;">\${a.country}</td>
-                        <td style="padding: 0.5rem; border: 1px solid #ddd;">
-                          <span style="color: \${a.risk === 'high' ? '#dc3545' : a.risk === 'medium' ? '#ffc107' : '#28a745'}; font-weight: 600;">
-                            \${a.risk.toUpperCase()}
-                          </span>
-                        </td>
-                        <td style="padding: 0.5rem; border: 1px solid #ddd; color: #666;">Information ...</td>
-                      </tr>
-                    \`).join('')}
-                  </tbody>
-                </table>
-              </div>
-            </div>
+        <!-- Full-Width Network Visualization -->
+        <div style="background: #f8f9fa; border-radius: 8px; padding: 1rem; margin-bottom: 2rem;">
+          <svg id="publicationNetworkSVG" width="100%" height="500" viewBox="0 0 1200 500" style="background: white; border-radius: 4px;">
+            \${initialNetworkSVG}
+          </svg>
+        </div>
 
-            <!-- Collaborating Institutions Table -->
-            <div style="background: #f8f9fa; border-radius: 8px; padding: 1rem;">
-              <h4 style="color: #6B9E3E; margin-bottom: 1rem; font-size: 1rem;">Collaborating Institutions</h4>
-              <div style="overflow-x: auto;">
-                <table style="width: 100%; font-size: 0.85rem; background: white; border-collapse: collapse;">
-                  <thead style="background: #6B9E3E; color: white;">
+        <!-- Tables Section (Two Columns) -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+          <!-- Authors & Affiliations Table -->
+          <div style="background: #f8f9fa; border-radius: 8px; padding: 1rem;">
+            <h4 style="color: #6B9E3E; margin-bottom: 1rem; font-size: 1rem;">Authors & Affiliations</h4>
+            <div style="overflow-x: auto;">
+              <table style="width: 100%; font-size: 0.85rem; background: white; border-collapse: collapse;">
+                <thead style="background: #6B9E3E; color: white;">
+                  <tr>
+                    <th style="padding: 0.5rem; text-align: left; border: 1px solid #ddd;">Author</th>
+                    <th style="padding: 0.5rem; text-align: left; border: 1px solid #ddd;">Institution</th>
+                    <th style="padding: 0.5rem; text-align: left; border: 1px solid #ddd;">Country</th>
+                    <th style="padding: 0.5rem; text-align: left; border: 1px solid #ddd;">Risk</th>
+                    <th style="padding: 0.5rem; text-align: left; border: 1px solid #ddd;">Details</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  \${authorsData.slice(0, 10).map(a => \`
                     <tr>
-                      <th style="padding: 0.5rem; text-align: left; border: 1px solid #ddd;">Institution</th>
-                      <th style="padding: 0.5rem; text-align: left; border: 1px solid #ddd;">Category</th>
-                      <th style="padding: 0.5rem; text-align: left; border: 1px solid #ddd;">Risk</th>
-                      <th style="padding: 0.5rem; text-align: left; border: 1px solid #ddd;">Details</th>
+                      <td style="padding: 0.5rem; border: 1px solid #ddd;">\${a.author.substring(0, 20)}\${a.author.length > 20 ? '...' : ''}</td>
+                      <td style="padding: 0.5rem; border: 1px solid #ddd;">\${a.institution.substring(0, 25)}\${a.institution.length > 25 ? '...' : ''}</td>
+                      <td style="padding: 0.5rem; border: 1px solid #ddd;">\${a.country}</td>
+                      <td style="padding: 0.5rem; border: 1px solid #ddd;">
+                        <span style="color: \${a.risk === 'high' ? '#dc3545' : a.risk === 'medium' ? '#ffc107' : '#28a745'}; font-weight: 600;">
+                          \${a.risk.toUpperCase()}
+                        </span>
+                      </td>
+                      <td style="padding: 0.5rem; border: 1px solid #ddd; color: #666;">Information ...</td>
                     </tr>
-                  </thead>
-                  <tbody>
-                    \${institutions.slice(0, 10).map(inst => \`
-                      <tr>
-                        <td style="padding: 0.5rem; border: 1px solid #ddd;">\${inst.name.substring(0, 30)}\${inst.name.length > 30 ? '...' : ''}</td>
-                        <td style="padding: 0.5rem; border: 1px solid #ddd;">\${inst.category}</td>
-                        <td style="padding: 0.5rem; border: 1px solid #ddd;">
-                          <span style="color: \${inst.risk === 'high' ? '#dc3545' : inst.risk === 'medium' ? '#ffc107' : '#28a745'}; font-weight: 600;">
-                            \${inst.risk.toUpperCase()}
-                          </span>
-                        </td>
-                        <td style="padding: 0.5rem; border: 1px solid #ddd; color: #666;">Information ...</td>
-                      </tr>
-                    \`).join('')}
-                  </tbody>
-                </table>
-              </div>
+                  \`).join('')}
+                </tbody>
+              </table>
             </div>
           </div>
 
-          <!-- Right Side: Network Visualization -->
+          <!-- Collaborating Institutions Table -->
           <div style="background: #f8f9fa; border-radius: 8px; padding: 1rem;">
-            <svg id="publicationNetworkSVG" width="100%" height="450" viewBox="0 0 600 400" style="background: white; border-radius: 4px;">
-              \${initialNetworkSVG}
-            </svg>
+            <h4 style="color: #6B9E3E; margin-bottom: 1rem; font-size: 1rem;">Collaborating Institutions</h4>
+            <div style="overflow-x: auto;">
+              <table style="width: 100%; font-size: 0.85rem; background: white; border-collapse: collapse;">
+                <thead style="background: #6B9E3E; color: white;">
+                  <tr>
+                    <th style="padding: 0.5rem; text-align: left; border: 1px solid #ddd;">Institution</th>
+                    <th style="padding: 0.5rem; text-align: left; border: 1px solid #ddd;">Category</th>
+                    <th style="padding: 0.5rem; text-align: left; border: 1px solid #ddd;">Risk</th>
+                    <th style="padding: 0.5rem; text-align: left; border: 1px solid #ddd;">Details</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  \${institutions.slice(0, 10).map(inst => \`
+                    <tr>
+                      <td style="padding: 0.5rem; border: 1px solid #ddd;">\${inst.name.substring(0, 30)}\${inst.name.length > 30 ? '...' : ''}</td>
+                      <td style="padding: 0.5rem; border: 1px solid #ddd;">\${inst.category}</td>
+                      <td style="padding: 0.5rem; border: 1px solid #ddd;">
+                        <span style="color: \${inst.risk === 'high' ? '#dc3545' : inst.risk === 'medium' ? '#ffc107' : '#28a745'}; font-weight: 600;">
+                          \${inst.risk.toUpperCase()}
+                        </span>
+                      </td>
+                      <td style="padding: 0.5rem; border: 1px solid #ddd; color: #666;">Information ...</td>
+                    </tr>
+                  \`).join('')}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
 
