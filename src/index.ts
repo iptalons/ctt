@@ -82,7 +82,9 @@ function serveHTML(): Response {
   return new Response(dashboardHTML, {
     headers: {
       'Content-Type': 'text/html',
-      'Cache-Control': 'public, max-age=3600'
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
     }
   });
 }
