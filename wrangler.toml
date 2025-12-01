@@ -3,18 +3,22 @@ main = "src/index.ts"
 compatibility_date = "2024-01-01"
 compatibility_flags = ["nodejs_compat"]
 
-# KV namespace for CN_FIGs data
-[[kv_namespaces]]
-binding = "CN_FIGS_KV"
-id = "placeholder_will_be_created"
-preview_id = "placeholder_will_be_created"
+# KV namespace for CN_FIGs data (commented out until namespaces are created)
+# To enable KV:
+# 1. Run: npx wrangler kv:namespace create "CN_FIGS_KV"
+# 2. Run: npx wrangler kv:namespace create "CN_FIGS_KV" --preview
+# 3. Uncomment the lines below and replace the IDs
+# 4. Run: npx tsx scripts/upload-cn-figs-to-kv.ts
+# 5. Deploy: npx wrangler deploy --env=""
+#
+# [[kv_namespaces]]
+# binding = "CN_FIGS_KV"
+# id = "your-production-namespace-id"
+# preview_id = "your-preview-namespace-id"
 
 [vars]
 ENVIRONMENT = "production"
 
 # For local development
 [env.dev]
-vars = { ENVIRONMENT = "development" }
-[[env.dev.kv_namespaces]]
-binding = "CN_FIGS_KV"
-id = "placeholder_will_be_created"
+vars = { ENVIRONMENT = "development"}
