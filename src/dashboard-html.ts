@@ -596,32 +596,9 @@ export const dashboardHTML = `<!DOCTYPE html>
   </header>
 
   <div class="container">
-    <!-- Executive Summary -->
-    <section class="executive-summary hidden" id="executiveSummary">
-      <div class="summary-header">
-        <div class="summary-title">
-          <i class="fas fa-chart-line"></i>
-          Executive Summary
-        </div>
-      </div>
-
-      <!-- KPI Grid -->
-      <div class="kpi-grid" id="kpiGrid">
-        <!-- KPIs will be inserted here -->
-      </div>
-
-      <div class="alert alert-warning">
-        <i class="fas fa-exclamation-triangle"></i>
-        <div>
-          <strong>Foreign Influence Alert:</strong> This analysis identifies research collaborations
-          involving Chinese government, military, and state-owned enterprise funding in strategic technology sectors.
-        </div>
-      </div>
-    </section>
-
-    <!-- Search Panel -->
+    <!-- Filter Panel -->
     <section class="search-panel">
-      <h3><i class="fas fa-search"></i> Search Parameters</h3>
+      <h3><i class="fas fa-filter"></i> Filter Parameters</h3>
       <form id="searchForm" class="search-form">
         <div class="form-group">
           <label for="sector">Strategic Sector</label>
@@ -651,6 +628,29 @@ export const dashboardHTML = `<!DOCTYPE html>
           </button>
         </div>
       </form>
+    </section>
+
+    <!-- Executive Summary -->
+    <section class="executive-summary hidden" id="executiveSummary">
+      <div class="summary-header">
+        <div class="summary-title">
+          <i class="fas fa-chart-line"></i>
+          Executive Summary
+        </div>
+      </div>
+
+      <!-- KPI Grid -->
+      <div class="kpi-grid" id="kpiGrid">
+        <!-- KPIs will be inserted here -->
+      </div>
+
+      <div class="alert alert-warning">
+        <i class="fas fa-exclamation-triangle"></i>
+        <div>
+          <strong>Foreign Influence Alert:</strong> This analysis identifies research collaborations
+          involving Chinese government, military, and state-owned enterprise funding in strategic technology sectors.
+        </div>
+      </div>
     </section>
 
     <!-- Loading State -->
