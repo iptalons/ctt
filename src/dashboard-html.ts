@@ -1320,52 +1320,231 @@ export const dashboardHTML = `<!DOCTYPE html>
       const result = currentData.results[index];
       const work = result.work;
 
+      // Calculate highest risk level from funders
+      const highestRisk = result.chinese_funders.reduce((max, f) => {
+        const levels = { high: 3, medium: 2, low: 1 };
+        return levels[f.risk_level] > levels[max] ? f.risk_level : max;
+      }, 'low');
+
+      // Build authors & affiliations data
+      const authorsData = [];
+      work.authorships?.forEach(a => {
+        const authorName = a.author?.display_name || 'Unknown';
+        const institution = a.institutions?.[0]?.display_name || 'Unknown';
+        const country = a.institutions?.[0]?.country_code || 'N/A';
+
+        // Determine risk based on country and institution
+        let risk = 'low';
+        if (country === 'CN') {
+          // Check if institution is in Chinese funders or has high risk
+          const isHighRisk = result.chinese_funders.some(f =>
+            institution.toLowerCase().includes(f.name.toLowerCase()) ||
+            f.risk_level === 'high'
+          );
+          risk = isHighRisk ? 'high' : 'medium';
+        }
+
+        authorsData.push({
+          author: authorName,
+          institution: institution,
+          country: country,
+          risk: risk
+        });
+      });
+
+      // Build collaborating institutions data
+      const institutionMap = {};
+      work.authorships?.forEach(a => {
+        a.institutions?.forEach(inst => {
+          const instName = inst.display_name || 'Unknown';
+          const country = inst.country_code || '';
+
+          if (!institutionMap[instName]) {
+            let category = inst.type || 'University';
+            let risk = 'low';
+
+            if (country === 'CN') {
+              // Check if this is a known high-risk institution
+              const instLower = instName.toLowerCase();
+              if (instLower.includes('military') || instLower.includes('pla') || instLower.includes('defense')) {
+                category = 'Military';
+                risk = 'high';
+              } else if (instLower.includes('academy of sciences') || instLower.includes('ministry')) {
+                category = 'Government';
+                risk = 'high';
+              } else {
+                risk = 'medium';
+              }
+            }
+
+            institutionMap[instName] = {
+              name: instName,
+              category: category,
+              risk: risk,
+              country: country
+            };
+          }
+        });
+      });
+
+      const institutions = Object.values(institutionMap);
+
+      // Calculate impact factor (using citation count / years since publication as proxy)
+      const yearsSincePublication = new Date().getFullYear() - work.publication_year;
+      const impactFactor = yearsSincePublication > 0 ?
+        (work.cited_by_count / yearsSincePublication).toFixed(2) :
+        work.cited_by_count.toFixed(2);
+
+      // Generate network visualization with publication at center
+      const topInstitutions = institutions.slice(0, 15);
+      const centerX = 300;
+      const centerY = 200;
+      const radius = 150;
+
+      let networkSVG = '';
+      topInstitutions.forEach((inst, i) => {
+        const angle = (i / topInstitutions.length) * 2 * Math.PI;
+        const x = centerX + radius * Math.cos(angle);
+        const y = centerY + radius * Math.sin(angle);
+
+        // Node color based on risk
+        const nodeColor = inst.risk === 'high' ? '#dc3545' : inst.risk === 'medium' ? '#ffc107' : '#28a745';
+        const nodeSize = 12;
+
+        // Draw connection line
+        networkSVG += \`<line x1="\${centerX}" y1="\${centerY}" x2="\${x}" y2="\${y}" stroke="#ccc" stroke-width="1" opacity="0.5"/>\`;
+
+        // Draw node
+        networkSVG += \`<circle cx="\${x}" cy="\${y}" r="\${nodeSize}" fill="\${nodeColor}" stroke="white" stroke-width="2"/>\`;
+
+        // Add label
+        const labelX = centerX + (radius + 30) * Math.cos(angle);
+        const labelY = centerY + (radius + 30) * Math.sin(angle);
+        const textAnchor = labelX > centerX ? 'start' : 'end';
+        networkSVG += \`<text x="\${labelX}" y="\${labelY}" text-anchor="\${textAnchor}" font-size="10" fill="#333">\${inst.name.substring(0, 20)}\${inst.name.length > 20 ? '...' : ''}</text>\`;
+      });
+
+      // Center node (publication)
+      networkSVG += \`<circle cx="\${centerX}" cy="\${centerY}" r="30" fill="#6B9E3E" stroke="white" stroke-width="3"/>\`;
+      networkSVG += \`<text x="\${centerX}" y="\${centerY}" text-anchor="middle" dominant-baseline="middle" font-size="12" fill="white" font-weight="bold">Publication</text>\`;
+
       const modalHTML = \`
-        <div style="display: grid; gap: 1.5rem;">
-          <div>
-            <h4 style="color: var(--navy-dark); margin-bottom: 0.5rem;">Publication Details</h4>
-            <p><strong>Year:</strong> \${work.publication_year}</p>
-            <p><strong>Citations:</strong> \${work.cited_by_count}</p>
-            <p><strong>Collaboration Score:</strong> \${result.collaboration_score}/100</p>
-            \${work.doi ? \`<p><strong>DOI:</strong> <a href="https://doi.org/\${work.doi}" target="_blank">\${work.doi}</a></p>\` : ''}
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-bottom: 1.5rem;">
+          <!-- Citation Count Card -->
+          <div style="border: 3px solid #6B9E3E; border-radius: 8px; padding: 1.5rem; text-align: center; background: white;">
+            <div style="color: #666; font-size: 0.9rem; font-weight: 600; margin-bottom: 0.5rem;">CITATION COUNT:</div>
+            <div style="color: #6B9E3E; font-size: 2rem; font-weight: bold;">\${work.cited_by_count}</div>
           </div>
 
-          <div>
-            <h4 style="color: var(--navy-dark); margin-bottom: 0.5rem;">US Authors & Institutions</h4>
-            <p><strong>Authors:</strong> \${result.us_authors.length}</p>
-            <p><strong>Institutions:</strong></p>
-            <ul style="margin-left: 1.5rem;">
-              \${result.us_institutions.map(i => \`<li>\${i.display_name}</li>\`).join('')}
-            </ul>
+          <!-- Impact Factor Card -->
+          <div style="border: 3px solid #6B9E3E; border-radius: 8px; padding: 1.5rem; text-align: center; background: white; position: relative;">
+            <div style="position: absolute; top: 10px; right: 10px; width: 20px; height: 20px; background: #6B9E3E; border-radius: 50%;"></div>
+            <div style="color: #666; font-size: 0.9rem; font-weight: 600; margin-bottom: 0.5rem;">IMPACT FACTOR:</div>
+            <div style="color: #6B9E3E; font-size: 2rem; font-weight: bold;">\${impactFactor}</div>
           </div>
+        </div>
 
-          <div>
-            <h4 style="color: var(--navy-dark); margin-bottom: 0.5rem;">Chinese Authors & Institutions</h4>
-            <p><strong>Authors:</strong> \${result.china_authors.length}</p>
-            <p><strong>Institutions:</strong></p>
-            <ul style="margin-left: 1.5rem;">
-              \${result.china_institutions.map(i => \`<li>\${i.display_name}</li>\`).join('')}
-            </ul>
-          </div>
+        <!-- Risk Level Legend -->
+        <div style="display: flex; gap: 0.5rem; margin-bottom: 1.5rem; justify-content: center;">
+          <span style="padding: 0.5rem 1rem; background: #dc3545; color: white; border-radius: 4px; font-size: 0.85rem; font-weight: 600;">VERY HIGH</span>
+          <span style="padding: 0.5rem 1rem; background: #ff6b6b; color: white; border-radius: 4px; font-size: 0.85rem; font-weight: 600;">HIGH</span>
+          <span style="padding: 0.5rem 1rem; background: #ffc107; color: white; border-radius: 4px; font-size: 0.85rem; font-weight: 600;">MEDIUM</span>
+          <span style="padding: 0.5rem 1rem; background: #90EE90; color: #333; border-radius: 4px; font-size: 0.85rem; font-weight: 600;">LOW</span>
+        </div>
 
-          \${result.chinese_funders.length > 0 ? \`
-            <div>
-              <h4 style="color: var(--red); margin-bottom: 0.5rem;">⚠️ Chinese Funders</h4>
-              <ul style="margin-left: 1.5rem;">
-                \${result.chinese_funders.map(f => \`
-                  <li>
-                    <strong>\${f.name}</strong>
-                    <span class="risk-badge risk-\${f.risk_level}">\${f.risk_level.toUpperCase()}</span>
-                    <br><small>Type: \${f.type}</small>
-                  </li>
-                \`).join('')}
-              </ul>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+          <!-- Left Side: Tables -->
+          <div style="display: grid; gap: 1.5rem; grid-template-rows: auto auto;">
+            <!-- Authors & Affiliations Table -->
+            <div style="background: #f8f9fa; border-radius: 8px; padding: 1rem;">
+              <h4 style="color: #6B9E3E; margin-bottom: 1rem; font-size: 1rem;">Authors & Affiliations</h4>
+              <div style="overflow-x: auto;">
+                <table style="width: 100%; font-size: 0.85rem; background: white; border-collapse: collapse;">
+                  <thead style="background: #6B9E3E; color: white;">
+                    <tr>
+                      <th style="padding: 0.5rem; text-align: left; border: 1px solid #ddd;">Author</th>
+                      <th style="padding: 0.5rem; text-align: left; border: 1px solid #ddd;">Institution</th>
+                      <th style="padding: 0.5rem; text-align: left; border: 1px solid #ddd;">Country</th>
+                      <th style="padding: 0.5rem; text-align: left; border: 1px solid #ddd;">Risk</th>
+                      <th style="padding: 0.5rem; text-align: left; border: 1px solid #ddd;">Details</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    \${authorsData.slice(0, 10).map(a => \`
+                      <tr>
+                        <td style="padding: 0.5rem; border: 1px solid #ddd;">\${a.author.substring(0, 20)}\${a.author.length > 20 ? '...' : ''}</td>
+                        <td style="padding: 0.5rem; border: 1px solid #ddd;">\${a.institution.substring(0, 25)}\${a.institution.length > 25 ? '...' : ''}</td>
+                        <td style="padding: 0.5rem; border: 1px solid #ddd;">\${a.country}</td>
+                        <td style="padding: 0.5rem; border: 1px solid #ddd;">
+                          <span style="color: \${a.risk === 'high' ? '#dc3545' : a.risk === 'medium' ? '#ffc107' : '#28a745'}; font-weight: 600;">
+                            \${a.risk.toUpperCase()}
+                          </span>
+                        </td>
+                        <td style="padding: 0.5rem; border: 1px solid #ddd; color: #666;">Information ...</td>
+                      </tr>
+                    \`).join('')}
+                  </tbody>
+                </table>
+              </div>
             </div>
-          \` : ''}
+
+            <!-- Collaborating Institutions Table -->
+            <div style="background: #f8f9fa; border-radius: 8px; padding: 1rem;">
+              <h4 style="color: #6B9E3E; margin-bottom: 1rem; font-size: 1rem;">Collaborating Institutions</h4>
+              <div style="overflow-x: auto;">
+                <table style="width: 100%; font-size: 0.85rem; background: white; border-collapse: collapse;">
+                  <thead style="background: #6B9E3E; color: white;">
+                    <tr>
+                      <th style="padding: 0.5rem; text-align: left; border: 1px solid #ddd;">Institution</th>
+                      <th style="padding: 0.5rem; text-align: left; border: 1px solid #ddd;">Category</th>
+                      <th style="padding: 0.5rem; text-align: left; border: 1px solid #ddd;">Risk</th>
+                      <th style="padding: 0.5rem; text-align: left; border: 1px solid #ddd;">Details</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    \${institutions.slice(0, 10).map(inst => \`
+                      <tr>
+                        <td style="padding: 0.5rem; border: 1px solid #ddd;">\${inst.name.substring(0, 30)}\${inst.name.length > 30 ? '...' : ''}</td>
+                        <td style="padding: 0.5rem; border: 1px solid #ddd;">\${inst.category}</td>
+                        <td style="padding: 0.5rem; border: 1px solid #ddd;">
+                          <span style="color: \${inst.risk === 'high' ? '#dc3545' : inst.risk === 'medium' ? '#ffc107' : '#28a745'}; font-weight: 600;">
+                            \${inst.risk.toUpperCase()}
+                          </span>
+                        </td>
+                        <td style="padding: 0.5rem; border: 1px solid #ddd; color: #666;">Information ...</td>
+                      </tr>
+                    \`).join('')}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- Right Side: Network Visualization -->
+          <div style="background: #f8f9fa; border-radius: 8px; padding: 1rem;">
+            <svg width="100%" height="450" viewBox="0 0 600 400" style="background: white; border-radius: 4px;">
+              \${networkSVG}
+            </svg>
+          </div>
+        </div>
+
+        <!-- Footer with data source -->
+        <div style="margin-top: 1.5rem; padding: 1rem; background: #f8f9fa; border-radius: 4px; font-size: 0.75rem; color: #666;">
+          <strong>Data source:</strong> <a href="https://www.nist.gov/itl/ssd/software-quality-group/collaborations-2023" target="_blank" style="color: #6B9E3E;">https://www.nist.gov/itl/ssd/software-quality-group/collaborations-2023</a>
+          <br>
+          <strong>Disclaimer:</strong> While considerable efforts were undertaken to verify all data, possible errors remain. Technical quality, etc. We disclaim all liability for accuracy, completeness, so possible to file a petition for survey of actions relating within working quality proceedings. | <a href="#" style="color: #6B9E3E;">Privacy Policy</a>
+        </div>
+
+        <!-- Publication Details -->
+        <div style="margin-top: 1rem; padding: 1rem; background: white; border-radius: 4px; border-left: 4px solid #6B9E3E;">
+          <p style="margin: 0.25rem 0;"><strong>Year:</strong> \${work.publication_year}</p>
+          <p style="margin: 0.25rem 0;"><strong>Collaboration Score:</strong> \${result.collaboration_score}/100</p>
+          \${work.doi ? \`<p style="margin: 0.25rem 0;"><strong>DOI:</strong> <a href="https://doi.org/\${work.doi}" target="_blank" style="color: #6B9E3E;">\${work.doi}</a></p>\` : ''}
         </div>
       \`;
 
-      document.getElementById('modalTitle').textContent = work.title;
+      document.getElementById('modalTitle').textContent = 'Research Publication: ' + work.title;
+      document.getElementById('modalTitle').style.color = '#6B9E3E';
       document.getElementById('modalBody').innerHTML = modalHTML;
       document.getElementById('detailModal').classList.add('active');
     }
