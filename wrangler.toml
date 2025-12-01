@@ -14,7 +14,3 @@ ENVIRONMENT = "production"
 # For local development
 [env.dev]
 vars = { ENVIRONMENT = "development" }
-
-# Assets configuration for serving static files
-[site]
-bucket = "./public"
