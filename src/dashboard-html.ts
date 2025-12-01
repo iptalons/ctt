@@ -745,6 +745,33 @@ export const dashboardHTML = `<!DOCTYPE html>
         </div>
       </section>
 
+      <!-- Top US Institutions Table -->
+      <section class="table-card hidden" id="usInstitutionsTable">
+        <div class="table-header">
+          <div class="table-title"><i class="fas fa-university"></i> Top US Institutions</div>
+          <div class="table-actions">
+            <button class="btn btn-secondary" onclick="exportUSInstitutions()">
+              <i class="fas fa-file-csv"></i> Export
+            </button>
+          </div>
+        </div>
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Institution Name</th>
+              <th>Type</th>
+              <th>Publications</th>
+              <th>Citations</th>
+              <th>Top Sector</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="usInstitutionsTableBody">
+            <!-- Rows will be inserted here -->
+          </tbody>
+        </table>
+      </section>
+
       <!-- Chinese Funders Table -->
       <section class="table-card hidden" id="fundersTable">
         <div class="table-header">
@@ -923,6 +950,7 @@ export const dashboardHTML = `<!DOCTYPE html>
       displayCharts(data);
 
       // Display Tables
+      displayUSInstitutionsTable(data);
       displayFundersTable(data);
       displayPublicationsTable(data);
     }
@@ -1167,6 +1195,61 @@ export const dashboardHTML = `<!DOCTYPE html>
           }
         }
       });
+    }
+
+    function displayUSInstitutionsTable(data) {
+      // Aggregate US institutions from all publications
+      const usInstMap = {};
+
+      data.results.forEach(r => {
+        r.us_institutions.forEach(inst => {
+          if (!usInstMap[inst.display_name]) {
+            usInstMap[inst.display_name] = {
+              name: inst.display_name,
+              type: inst.type || 'University',
+              pubs: 0,
+              citations: 0,
+              sectors: new Set()
+            };
+          }
+          usInstMap[inst.display_name].pubs++;
+          usInstMap[inst.display_name].citations += r.work.cited_by_count;
+
+          // Track sectors this institution is involved in
+          if (r.work.concepts && r.work.concepts.length > 0) {
+            r.work.concepts.slice(0, 3).forEach(concept => {
+              usInstMap[inst.display_name].sectors.add(concept.display_name);
+            });
+          }
+        });
+      });
+
+      const usInstitutions = Object.values(usInstMap)
+        .map(inst => ({
+          ...inst,
+          topSector: Array.from(inst.sectors)[0] || 'N/A'
+        }))
+        .sort((a, b) => b.citations - a.citations); // Sort by citations
+
+      if (usInstitutions.length === 0) {
+        document.getElementById('usInstitutionsTable').classList.add('hidden');
+        return;
+      }
+
+      document.getElementById('usInstitutionsTable').classList.remove('hidden');
+
+      const tableHTML = usInstitutions.map(inst => \`
+        <tr onclick="showUSInstitutionDetail('\${inst.name.replace(/'/g, "\\\\'")}')">
+          <td><strong>\${inst.name}</strong></td>
+          <td><span style="text-transform: capitalize;">\${inst.type}</span></td>
+          <td>\${inst.pubs}</td>
+          <td>\${inst.citations.toLocaleString()}</td>
+          <td>\${inst.topSector}</td>
+          <td><button class="btn btn-action">Details</button></td>
+        </tr>
+      \`).join('');
+
+      document.getElementById('usInstitutionsTableBody').innerHTML = tableHTML;
     }
 
     function displayFundersTable(data) {
@@ -1589,6 +1672,201 @@ export const dashboardHTML = `<!DOCTYPE html>
       document.getElementById('detailModal').classList.add('active');
     }
 
+    function showUSInstitutionDetail(institutionName, filterChinaOnly = false) {
+      const relatedPubs = currentData.results.filter(r =>
+        r.us_institutions.some(inst => inst.display_name === institutionName)
+      );
+
+      const usInstitution = relatedPubs[0].us_institutions.find(inst => inst.display_name === institutionName);
+
+      // Extract collaborating institutions
+      const institutionMap = {};
+      relatedPubs.forEach(r => {
+        r.work.authorships?.forEach(a => {
+          a.institutions?.forEach(inst => {
+            const instName = inst.display_name || 'Unknown';
+            const country = inst.country_code || '';
+
+            // Skip the US institution itself
+            if (instName === institutionName) return;
+
+            // If filter is on, only include Chinese institutions
+            if (filterChinaOnly && country !== 'CN') return;
+
+            // Include both CN and US institutions (or only CN if filtered)
+            if (country === 'CN' || (!filterChinaOnly && country === 'US')) {
+              if (!institutionMap[instName]) {
+                institutionMap[instName] = {
+                  name: instName,
+                  country: country,
+                  type: inst.type || 'University',
+                  publications: 0,
+                  citations: 0
+                };
+              }
+              institutionMap[instName].publications++;
+              institutionMap[instName].citations += r.work.cited_by_count;
+            }
+          });
+        });
+      });
+
+      const topInstitutions = Object.values(institutionMap)
+        .sort((a, b) => b.citations - a.citations)
+        .slice(0, 15);
+
+      const totalCitations = relatedPubs.reduce((sum, r) => sum + r.work.cited_by_count, 0);
+      const avgCitations = relatedPubs.length > 0 ? Math.round(totalCitations / relatedPubs.length) : 0;
+
+      const modalHTML = \`
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-bottom: 2rem;">
+          <!-- Institution Info Card -->
+          <div style="border: 3px solid #007bff; border-radius: 8px; padding: 1.5rem; text-align: center; background: white;">
+            <div style="color: #666; font-size: 0.9rem; font-weight: 600; margin-bottom: 0.5rem;">US INSTITUTION:</div>
+            <div style="color: #007bff; font-size: 1.5rem; font-weight: bold;">
+              \${usInstitution?.type || 'University'}
+            </div>
+          </div>
+
+          <!-- Publications Card -->
+          <div style="border: 3px solid var(--iptalons-green); border-radius: 8px; padding: 1.5rem; text-align: center; background: white;">
+            <div style="color: #666; font-size: 0.9rem; font-weight: 600; margin-bottom: 0.5rem;">TOTAL COLLABORATIONS:</div>
+            <div style="color: var(--iptalons-green); font-size: 2rem; font-weight: bold;">
+              \${relatedPubs.length}
+            </div>
+          </div>
+        </div>
+
+        <!-- Filter Controls -->
+        <div style="margin-bottom: 2rem; padding: 1rem; background: #f8f9fa; border-radius: 4px; display: flex; align-items: center; justify-content: space-between;">
+          <div style="font-weight: 600; color: #333;">
+            <i class="fas fa-filter"></i> Filter Collaborators:
+          </div>
+          <div>
+            <label style="margin-right: 1rem; cursor: pointer;">
+              <input type="radio" name="instFilter" value="all" \${!filterChinaOnly ? 'checked' : ''}
+                     onchange="showUSInstitutionDetail('\${institutionName.replace(/'/g, "\\\\'")}', false)"
+                     style="margin-right: 5px;">
+              Show All Institutions
+            </label>
+            <label style="cursor: pointer;">
+              <input type="radio" name="instFilter" value="china" \${filterChinaOnly ? 'checked' : ''}
+                     onchange="showUSInstitutionDetail('\${institutionName.replace(/'/g, "\\\\'")}', true)"
+                     style="margin-right: 5px;">
+              Chinese Institutions Only
+            </label>
+          </div>
+        </div>
+
+        <!-- Network Visualization -->
+        <div style="margin-bottom: 2rem;">
+          <h4 style="color: var(--iptalons-green); margin-bottom: 1rem; border-bottom: 2px solid var(--iptalons-green); padding-bottom: 0.5rem;">
+            <i class="fas fa-project-diagram"></i> Collaboration Network
+          </h4>
+          <div style="background: white; border-radius: 8px; padding: 1rem; height: 500px; position: relative; overflow: hidden;">
+            <svg width="100%" height="100%" style="display: block;" viewBox="0 0 800 500">
+              <defs>
+                <style>
+                  .inst-label { font-size: 9px; font-family: Arial, sans-serif; }
+                  .central-label { font-size: 10px; font-weight: bold; font-family: Arial, sans-serif; fill: white; }
+                </style>
+              </defs>
+
+              <!-- Connected institutions (circular layout) -->
+              \${topInstitutions.map((inst, idx) => {
+                const angle = (idx * 2 * Math.PI) / Math.min(topInstitutions.length, 15);
+                const radius = 180;
+                const centerX = 400;
+                const centerY = 250;
+                const x = centerX + radius * Math.cos(angle - Math.PI / 2);
+                const y = centerY + radius * Math.sin(angle - Math.PI / 2);
+                const color = inst.country === 'CN' ? '#dc3545' : '#007bff';
+
+                // Size based on citations
+                const minSize = 8;
+                const maxSize = 30;
+                const scaleFactor = 0.15;
+                const scaledSize = minSize + Math.sqrt(inst.citations) * scaleFactor;
+                const size = Math.min(maxSize, Math.max(minSize, scaledSize));
+
+                const shortName = inst.name.length > 25 ? inst.name.substring(0, 22) + '...' : inst.name;
+                const labelRadius = radius + 25 + (size - minSize) / 2;
+                const labelX = centerX + labelRadius * Math.cos(angle - Math.PI / 2);
+                const labelY = centerY + labelRadius * Math.sin(angle - Math.PI / 2);
+
+                return \`
+                  <line x1="\${centerX}" y1="\${centerY}" x2="\${x}" y2="\${y}" stroke="#ddd" stroke-width="2" opacity="0.4"/>
+                  <circle cx="\${x}" cy="\${y}" r="\${size}" fill="\${color}" stroke="#333" stroke-width="2" opacity="0.85">
+                    <title>\${inst.name}\\n\${inst.citations.toLocaleString()} citations | \${inst.publications} publications</title>
+                  </circle>
+                  <text x="\${labelX}" y="\${labelY}" text-anchor="middle" class="inst-label" fill="#333">
+                    \${shortName}
+                  </text>
+                \`;
+              }).join('')}
+
+              <!-- Central node (US Institution) -->
+              <circle cx="400" cy="250" r="45" fill="#007bff" stroke="#333" stroke-width="3"/>
+
+              <!-- US Institution name in center -->
+              \${(() => {
+                let displayName = institutionName;
+                if (displayName.length > 30) {
+                  const words = displayName.split(' ');
+                  if (words.length > 3) {
+                    displayName = words.slice(0, 3).join(' ') + '...';
+                  } else {
+                    displayName = displayName.substring(0, 25) + '...';
+                  }
+                }
+                return \`<text x="400" y="250" text-anchor="middle" dominant-baseline="middle" class="central-label">\${displayName}</text>\`;
+              })()}
+
+            </svg>
+
+            <!-- Legend -->
+            <div style="position: absolute; top: 10px; right: 10px; background: white; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px; font-size: 0.8rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+              <div style="font-weight: 600; margin-bottom: 5px; color: #333;">Legend</div>
+              <div><span style="display: inline-block; width: 12px; height: 12px; background: #dc3545; border-radius: 50%; margin-right: 5px;"></span>Chinese Institution</div>
+              <div style="margin-top: 3px;"><span style="display: inline-block; width: 12px; height: 12px; background: #007bff; border-radius: 50%; margin-right: 5px;"></span>US Institution</div>
+              <div style="margin-top: 8px; padding-top: 5px; border-top: 1px solid #ddd; font-size: 0.75rem; color: #666;">Node size = citations</div>
+            </div>
+
+            <!-- Institution Full Name Display -->
+            <div style="position: absolute; bottom: 10px; left: 10px; right: 10px; background: #f8f9fa; padding: 0.75rem; border-radius: 4px; border-left: 4px solid #007bff; font-size: 0.85rem;">
+              <strong>Central Node:</strong> \${institutionName}
+            </div>
+          </div>
+        </div>
+
+        <!-- Summary Stats -->
+        <div style="padding: 1.5rem; background: #f8f9fa; border-radius: 8px; border-left: 4px solid var(--iptalons-green);">
+          <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; text-align: center;">
+            <div>
+              <div style="font-size: 0.9rem; color: #666;">Total Publications</div>
+              <div style="font-size: 1.5rem; font-weight: bold; color: var(--iptalons-green);">\${relatedPubs.length}</div>
+            </div>
+            <div>
+              <div style="font-size: 0.9rem; color: #666;">Total Citations</div>
+              <div style="font-size: 1.5rem; font-weight: bold; color: var(--iptalons-green);">
+                \${totalCitations.toLocaleString()}
+              </div>
+            </div>
+            <div>
+              <div style="font-size: 0.9rem; color: #666;">Avg. Citations/Paper</div>
+              <div style="font-size: 1.5rem; font-weight: bold; color: var(--iptalons-green);">
+                \${avgCitations.toLocaleString()}
+              </div>
+            </div>
+          </div>
+        </div>
+      \`;
+
+      document.getElementById('modalTitle').textContent = 'US Institution: ' + institutionName;
+      document.getElementById('modalBody').innerHTML = modalHTML;
+      document.getElementById('detailModal').classList.add('active');
+    }
+
     function closeModal() {
       document.getElementById('detailModal').classList.remove('active');
     }
@@ -1603,6 +1881,10 @@ export const dashboardHTML = `<!DOCTYPE html>
 
     function exportFunders() {
       alert('Export funders data - Ready to implement');
+    }
+
+    function exportUSInstitutions() {
+      alert('Export US institutions data - Ready to implement');
     }
 
     function exportPublications() {
