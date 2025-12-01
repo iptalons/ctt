@@ -454,7 +454,8 @@ export const dashboardHTML = `<!DOCTYPE html>
     .modal-content {
       background: var(--white);
       border-radius: 12px;
-      max-width: 900px;
+      max-width: 1200px;
+      width: 95%;
       max-height: 90vh;
       overflow-y: auto;
       position: relative;
@@ -1203,7 +1204,7 @@ export const dashboardHTML = `<!DOCTYPE html>
           <td><span class="risk-badge risk-\${f.risk}">\${f.risk.toUpperCase()}</span></td>
           <td>\${f.pubs}</td>
           <td>\${f.citations.toLocaleString()}</td>
-          <td><button class="btn btn-action">Action</button></td>
+          <td><button class="btn btn-action">Details</button></td>
         </tr>
       \`).join('');
 
@@ -1293,32 +1294,194 @@ export const dashboardHTML = `<!DOCTYPE html>
 
       const funder = relatedPubs[0].chinese_funders.find(f => f.name === funderName);
 
+      // Extract researchers from publications
+      const researcherMap = {};
+      relatedPubs.forEach(r => {
+        r.work.authorships?.forEach(a => {
+          const authorName = a.author?.display_name || 'Unknown';
+          const country = a.countries?.[0] || '';
+          const institution = a.institutions?.[0]?.display_name || 'Unknown';
+
+          if (country === 'CN' || country === 'US') {
+            if (!researcherMap[authorName]) {
+              researcherMap[authorName] = {
+                name: authorName,
+                institution: institution,
+                country: country,
+                publications: 0,
+                citations: 0
+              };
+            }
+            researcherMap[authorName].publications++;
+            researcherMap[authorName].citations += r.work.cited_by_count;
+          }
+        });
+      });
+
+      const topResearchers = Object.values(researcherMap)
+        .sort((a, b) => b.publications - a.publications)
+        .slice(0, 10);
+
+      // Extract collaborating institutions
+      const institutionMap = {};
+      relatedPubs.forEach(r => {
+        r.work.authorships?.forEach(a => {
+          a.institutions?.forEach(inst => {
+            const instName = inst.display_name || 'Unknown';
+            const country = inst.country_code || '';
+
+            if (country === 'CN' || country === 'US') {
+              if (!institutionMap[instName]) {
+                institutionMap[instName] = {
+                  name: instName,
+                  country: country,
+                  type: inst.type || 'University',
+                  publications: 0,
+                  citations: 0
+                };
+              }
+              institutionMap[instName].publications++;
+              institutionMap[instName].citations += r.work.cited_by_count;
+            }
+          });
+        });
+      });
+
+      const topInstitutions = Object.values(institutionMap)
+        .sort((a, b) => b.publications - a.publications)
+        .slice(0, 10);
+
+      // Determine security credentials based on funder description or type
+      let securityCredentials = 'Not Available';
+      let securityClass = 'medium';
+
+      if (funder.description) {
+        if (funder.description.toLowerCase().includes('top secret')) {
+          securityCredentials = 'TOP SECRET';
+          securityClass = 'high';
+        } else if (funder.description.toLowerCase().includes('secret')) {
+          securityCredentials = 'SECRET';
+          securityClass = 'medium';
+        } else if (funder.description.toLowerCase().includes('military') || funder.description.toLowerCase().includes('seven sons')) {
+          securityCredentials = 'CLASSIFIED';
+          securityClass = 'high';
+        }
+      } else if (funder.type === 'military') {
+        securityCredentials = 'CLASSIFIED';
+        securityClass = 'high';
+      }
+
       const modalHTML = \`
-        <div style="display: grid; gap: 1.5rem;">
-          <div>
-            <span class="risk-badge risk-\${funder.risk_level}" style="font-size: 1rem; padding: 0.5rem 1rem;">
-              \${funder.risk_level.toUpperCase()} RISK
-            </span>
-            <p style="margin-top: 1rem;"><strong>Type:</strong> \${funder.type}</p>
-            <p><strong>Publications Found:</strong> \${relatedPubs.length}</p>
-            <p><strong>Total Citations:</strong> \${relatedPubs.reduce((sum, r) => sum + r.work.cited_by_count, 0).toLocaleString()}</p>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-bottom: 2rem;">
+          <!-- Risk Category Card -->
+          <div style="border: 3px solid \${funder.risk_level === 'high' ? '#dc3545' : funder.risk_level === 'medium' ? '#ffc107' : '#28a745'}; border-radius: 8px; padding: 1.5rem; text-align: center; background: white;">
+            <div style="color: #666; font-size: 0.9rem; font-weight: 600; margin-bottom: 0.5rem;">RISK CATEGORY:</div>
+            <div style="color: \${funder.risk_level === 'high' ? '#dc3545' : funder.risk_level === 'medium' ? '#ffc107' : '#28a745'}; font-size: 2rem; font-weight: bold;">
+              \${funder.risk_level === 'high' ? 'VERY HIGH' : funder.risk_level.toUpperCase()}
+            </div>
           </div>
 
+          <!-- Security Credentials Card -->
+          <div style="border: 3px solid \${securityClass === 'high' ? '#dc3545' : '#6B9E3E'}; border-radius: 8px; padding: 1.5rem; text-align: center; background: white;">
+            <div style="color: #666; font-size: 0.9rem; font-weight: 600; margin-bottom: 0.5rem;">SECURITY CREDENTIALS:</div>
+            <div style="color: \${securityClass === 'high' ? '#dc3545' : '#6B9E3E'}; font-size: 2rem; font-weight: bold;">
+              \${securityCredentials}
+            </div>
+          </div>
+        </div>
+
+        <!-- Risk Level Legend -->
+        <div style="display: flex; gap: 0.5rem; margin-bottom: 2rem; background: #f8f9fa; padding: 1rem; border-radius: 4px;">
+          <div style="flex: 1; background: #dc3545; color: white; padding: 0.5rem; text-align: center; border-radius: 4px; font-weight: 600;">VERY HIGH</div>
+          <div style="flex: 1; background: #fd7e14; color: white; padding: 0.5rem; text-align: center; border-radius: 4px; font-weight: 600;">HIGH</div>
+          <div style="flex: 1; background: #ffc107; color: white; padding: 0.5rem; text-align: center; border-radius: 4px; font-weight: 600;">MEDIUM</div>
+          <div style="flex: 1; background: #28a745; color: white; padding: 0.5rem; text-align: center; border-radius: 4px; font-weight: 600;">LOW</div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+          <!-- Top Researchers -->
           <div>
-            <h4 style="color: var(--navy-dark); margin-bottom: 0.5rem;">Related Publications</h4>
-            <ul style="margin-left: 1.5rem; max-height: 400px; overflow-y: auto;">
-              \${relatedPubs.map(r => \`
-                <li style="margin-bottom: 1rem;">
-                  <strong>\${r.work.title}</strong><br>
-                  <small>Year: \${r.work.publication_year} | Citations: \${r.work.cited_by_count}</small>
-                </li>
-              \`).join('')}
-            </ul>
+            <h4 style="color: var(--iptalons-green); margin-bottom: 1rem; border-bottom: 2px solid var(--iptalons-green); padding-bottom: 0.5rem;">
+              <i class="fas fa-users"></i> Top Researchers
+            </h4>
+            <div style="max-height: 400px; overflow-y: auto;">
+              <table style="width: 100%; font-size: 0.9rem;">
+                <thead style="background: var(--iptalons-green); color: white; position: sticky; top: 0;">
+                  <tr>
+                    <th style="padding: 0.5rem; text-align: left;">Name</th>
+                    <th style="padding: 0.5rem; text-align: left;">Category</th>
+                    <th style="padding: 0.5rem; text-align: center;">Pubs</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  \${topResearchers.map((r, idx) => \`
+                    <tr style="border-bottom: 1px solid #ddd; \${idx % 2 === 0 ? 'background: #f9f9f9;' : ''}">
+                      <td style="padding: 0.5rem;">\${r.name}</td>
+                      <td style="padding: 0.5rem; font-size: 0.85rem;">\${r.country === 'CN' ? 'Chinese' : 'US'} Researcher</td>
+                      <td style="padding: 0.5rem; text-align: center;">\${r.publications}</td>
+                    </tr>
+                  \`).join('')}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Collaborations -->
+          <div>
+            <h4 style="color: var(--iptalons-green); margin-bottom: 1rem; border-bottom: 2px solid var(--iptalons-green); padding-bottom: 0.5rem;">
+              <i class="fas fa-handshake"></i> Collaborations
+            </h4>
+            <div style="max-height: 400px; overflow-y: auto;">
+              <table style="width: 100%; font-size: 0.9rem;">
+                <thead style="background: var(--iptalons-green); color: white; position: sticky; top: 0;">
+                  <tr>
+                    <th style="padding: 0.5rem; text-align: left;">Institution</th>
+                    <th style="padding: 0.5rem; text-align: left;">Country</th>
+                    <th style="padding: 0.5rem; text-align: center;">Pubs</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  \${topInstitutions.map((inst, idx) => \`
+                    <tr style="border-bottom: 1px solid #ddd; \${idx % 2 === 0 ? 'background: #f9f9f9;' : ''}">
+                      <td style="padding: 0.5rem;">\${inst.name}</td>
+                      <td style="padding: 0.5rem;">
+                        <span style="display: inline-block; padding: 0.2rem 0.5rem; background: \${inst.country === 'CN' ? '#dc3545' : '#007bff'}; color: white; border-radius: 3px; font-size: 0.75rem;">
+                          \${inst.country}
+                        </span>
+                      </td>
+                      <td style="padding: 0.5rem; text-align: center;">\${inst.publications}</td>
+                    </tr>
+                  \`).join('')}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Summary Stats -->
+        <div style="margin-top: 2rem; padding: 1.5rem; background: #f8f9fa; border-radius: 8px; border-left: 4px solid var(--iptalons-green);">
+          <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; text-align: center;">
+            <div>
+              <div style="font-size: 0.9rem; color: #666;">Total Publications</div>
+              <div style="font-size: 1.5rem; font-weight: bold; color: var(--iptalons-green);">\${relatedPubs.length}</div>
+            </div>
+            <div>
+              <div style="font-size: 0.9rem; color: #666;">Total Citations</div>
+              <div style="font-size: 1.5rem; font-weight: bold; color: var(--iptalons-green);">
+                \${relatedPubs.reduce((sum, r) => sum + r.work.cited_by_count, 0).toLocaleString()}
+              </div>
+            </div>
+            <div>
+              <div style="font-size: 0.9rem; color: #666;">Institution Type</div>
+              <div style="font-size: 1.5rem; font-weight: bold; color: var(--iptalons-green); text-transform: capitalize;">
+                \${funder.type}
+              </div>
+            </div>
           </div>
         </div>
       \`;
 
-      document.getElementById('modalTitle').textContent = funderName;
+      document.getElementById('modalTitle').textContent = 'Chinese Foreign Influence Group: ' + funderName;
       document.getElementById('modalBody').innerHTML = modalHTML;
       document.getElementById('detailModal').classList.add('active');
     }
