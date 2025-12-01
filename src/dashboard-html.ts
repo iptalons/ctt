@@ -13,21 +13,22 @@ export const dashboardHTML = `<!DOCTYPE html>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
     :root {
-      --navy-dark: #0A2239;
-      --navy: #1E3A5F;
-      --navy-light: #2E4A6F;
-      --gold: #D4AF37;
-      --gold-light: #E5C158;
+      --iptalons-green: #6B9E3E;
+      --iptalons-green-dark: #5A8533;
+      --iptalons-green-light: #7BB049;
       --white: #FFFFFF;
       --gray-50: #F9FAFB;
       --gray-100: #F3F4F6;
       --gray-200: #E5E7EB;
       --gray-300: #D1D5DB;
+      --gray-400: #9CA3AF;
+      --gray-500: #6B7280;
       --gray-600: #4B5563;
+      --gray-700: #374151;
       --gray-800: #1F2937;
+      --gray-900: #111827;
       --red: #DC2626;
       --orange: #EA580C;
-      --green: #059669;
     }
 
     * {
@@ -41,23 +42,23 @@ export const dashboardHTML = `<!DOCTYPE html>
       line-height: 1.6;
       color: var(--gray-800);
       background: var(--gray-50);
+      margin: 0;
+      padding: 0;
     }
 
     /* Header */
     .header {
-      background: linear-gradient(135deg, var(--navy-dark) 0%, var(--navy) 100%);
-      color: var(--white);
-      padding: 1.5rem 0;
-      box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+      background: var(--white);
+      color: var(--gray-700);
+      padding: 0.75rem 2rem;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
       position: sticky;
       top: 0;
       z-index: 100;
     }
 
     .header-content {
-      max-width: 1400px;
-      margin: 0 auto;
-      padding: 0 2rem;
+      max-width: 100%;
       display: flex;
       justify-content: space-between;
       align-items: center;
@@ -66,33 +67,32 @@ export const dashboardHTML = `<!DOCTYPE html>
     .logo-section {
       display: flex;
       align-items: center;
-      gap: 1rem;
+      gap: 0.5rem;
     }
 
-    .logo-placeholder {
-      width: 140px;
-      height: 50px;
-      background: var(--white);
-      border-radius: 4px;
+    .logo-img {
+      height: 40px;
+      width: auto;
+    }
+
+    .nav-menu {
       display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: 700;
-      color: var(--navy-dark);
-      font-size: 0.9rem;
-      border: 2px solid var(--gold);
+      gap: 2rem;
+      list-style: none;
+      margin: 0;
+      padding: 0;
     }
 
-    .header-title {
-      font-size: 1.5rem;
-      font-weight: 700;
-      color: var(--white);
+    .nav-menu a {
+      color: var(--gray-700);
+      text-decoration: none;
+      font-size: 0.95rem;
+      font-weight: 500;
+      transition: color 0.2s;
     }
 
-    .header-subtitle {
-      font-size: 0.875rem;
-      opacity: 0.9;
-      margin-top: 0.25rem;
+    .nav-menu a:hover {
+      color: var(--iptalons-green);
     }
 
     .header-actions {
@@ -100,21 +100,71 @@ export const dashboardHTML = `<!DOCTYPE html>
       gap: 0.75rem;
     }
 
+    /* Main Layout */
+    .main-layout {
+      display: flex;
+      min-height: calc(100vh - 60px);
+    }
+
+    /* Sidebar */
+    .sidebar {
+      width: 280px;
+      background: var(--iptalons-green);
+      padding: 2rem 1.5rem;
+      box-shadow: 2px 0 8px rgba(0,0,0,0.1);
+      position: sticky;
+      top: 60px;
+      height: calc(100vh - 60px);
+      overflow-y: auto;
+    }
+
     /* Container */
     .container {
-      max-width: 1400px;
-      margin: 0 auto;
+      flex: 1;
       padding: 2rem;
+      overflow-x: auto;
+    }
+
+    /* Page Title */
+    .page-title {
+      margin-bottom: 1.5rem;
+    }
+
+    .page-title h1 {
+      font-size: 2rem;
+      color: var(--iptalons-green);
+      margin-bottom: 0.25rem;
+      font-weight: 700;
+    }
+
+    .page-title p {
+      color: var(--gray-600);
+      font-size: 1rem;
+    }
+
+    /* Search Panel (Sidebar) */
+    .search-panel {
+      background: transparent;
+      border-radius: 0;
+      padding: 0;
+      margin-bottom: 0;
+      box-shadow: none;
+    }
+
+    .search-panel h3 {
+      font-size: 1.1rem;
+      color: var(--white);
+      margin-bottom: 1.5rem;
+      font-weight: 600;
     }
 
     /* Executive Summary Section */
     .executive-summary {
       background: var(--white);
-      border-radius: 12px;
-      padding: 2rem;
-      margin-bottom: 2rem;
+      border-radius: 8px;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
       box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-      border-left: 4px solid var(--gold);
     }
 
     .summary-header {
@@ -127,9 +177,9 @@ export const dashboardHTML = `<!DOCTYPE html>
     }
 
     .summary-title {
-      font-size: 1.5rem;
+      font-size: 1.25rem;
       font-weight: 700;
-      color: var(--navy-dark);
+      color: var(--gray-800);
       display: flex;
       align-items: center;
       gap: 0.5rem;
@@ -144,59 +194,50 @@ export const dashboardHTML = `<!DOCTYPE html>
     }
 
     .kpi-card {
-      background: linear-gradient(135deg, var(--white) 0%, var(--gray-50) 100%);
-      border-radius: 10px;
-      padding: 1.5rem;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+      background: var(--white);
+      border-radius: 8px;
+      padding: 1.25rem;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
       border: 1px solid var(--gray-200);
-      transition: transform 0.2s, box-shadow 0.2s;
-      position: relative;
-      overflow: hidden;
-    }
-
-    .kpi-card::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      height: 4px;
-      background: linear-gradient(90deg, var(--navy) 0%, var(--gold) 100%);
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      transition: box-shadow 0.2s;
     }
 
     .kpi-card:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+      box-shadow: 0 2px 6px rgba(0,0,0,0.15);
     }
 
     .kpi-icon {
-      width: 48px;
-      height: 48px;
-      border-radius: 10px;
+      width: 60px;
+      height: 60px;
+      border-radius: 8px;
       display: flex;
       align-items: center;
       justify-content: center;
-      margin-bottom: 1rem;
-      font-size: 1.5rem;
+      font-size: 1.75rem;
+      flex-shrink: 0;
+      background: var(--iptalons-green);
+      color: var(--white);
     }
 
-    .kpi-icon.blue { background: #DBEAFE; color: var(--navy); }
-    .kpi-icon.gold { background: #FEF3C7; color: #92400E; }
-    .kpi-icon.red { background: #FEE2E2; color: var(--red); }
-    .kpi-icon.green { background: #D1FAE5; color: var(--green); }
+    .kpi-content {
+      flex: 1;
+    }
 
     .kpi-value {
-      font-size: 2.25rem;
+      font-size: 2rem;
       font-weight: 700;
-      color: var(--navy-dark);
+      color: var(--gray-800);
       line-height: 1;
-      margin-bottom: 0.5rem;
+      margin-bottom: 0.25rem;
     }
 
     .kpi-label {
       font-size: 0.875rem;
       color: var(--gray-600);
-      font-weight: 500;
+      font-weight: 400;
     }
 
     .kpi-trend {
@@ -210,28 +251,10 @@ export const dashboardHTML = `<!DOCTYPE html>
     .trend-up { color: var(--green); }
     .trend-down { color: var(--red); }
 
-    /* Search Panel */
-    .search-panel {
-      background: var(--white);
-      border-radius: 12px;
-      padding: 2rem;
-      margin-bottom: 2rem;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-    }
-
-    .search-panel h3 {
-      font-size: 1.25rem;
-      color: var(--navy-dark);
-      margin-bottom: 1.5rem;
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-    }
-
     .search-form {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-      gap: 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
     }
 
     .form-group {
@@ -241,31 +264,34 @@ export const dashboardHTML = `<!DOCTYPE html>
     }
 
     .form-group label {
-      font-weight: 600;
-      color: var(--gray-700);
+      font-weight: 500;
+      color: var(--white);
       font-size: 0.875rem;
     }
 
     .form-group select,
     .form-group input {
-      padding: 0.75rem 1rem;
-      border: 2px solid var(--gray-200);
-      border-radius: 8px;
-      font-size: 1rem;
+      padding: 0.65rem 0.875rem;
+      border: 1px solid rgba(255,255,255,0.3);
+      border-radius: 6px;
+      font-size: 0.95rem;
+      background: var(--white);
+      color: var(--gray-800);
       transition: border-color 0.2s;
     }
 
     .form-group select:focus,
     .form-group input:focus {
       outline: none;
-      border-color: var(--gold);
+      border-color: var(--iptalons-green-light);
+      box-shadow: 0 0 0 3px rgba(255,255,255,0.2);
     }
 
     /* Buttons */
     .btn {
-      padding: 0.75rem 1.5rem;
-      border-radius: 8px;
-      font-size: 1rem;
+      padding: 0.65rem 1.25rem;
+      border-radius: 6px;
+      font-size: 0.95rem;
       font-weight: 600;
       cursor: pointer;
       transition: all 0.2s;
@@ -277,29 +303,32 @@ export const dashboardHTML = `<!DOCTYPE html>
     }
 
     .btn-primary {
-      background: linear-gradient(135deg, var(--navy) 0%, var(--navy-light) 100%);
+      background: var(--iptalons-green);
       color: var(--white);
     }
 
     .btn-primary:hover {
+      background: var(--iptalons-green-dark);
       transform: translateY(-1px);
-      box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+      box-shadow: 0 2px 4px rgba(0,0,0,0.15);
     }
 
     .btn-secondary {
       background: var(--white);
-      color: var(--navy);
-      border: 2px solid var(--navy);
+      color: var(--iptalons-green);
+      border: 1px solid var(--iptalons-green);
     }
 
     .btn-secondary:hover {
-      background: var(--navy);
+      background: var(--iptalons-green);
       color: var(--white);
     }
 
-    .btn-gold {
-      background: var(--gold);
-      color: var(--navy-dark);
+    .btn-action {
+      background: var(--iptalons-green);
+      color: var(--white);
+      padding: 0.35rem 0.75rem;
+      font-size: 0.85rem;
     }
 
     .btn:disabled {
@@ -377,15 +406,16 @@ export const dashboardHTML = `<!DOCTYPE html>
     }
 
     .data-table thead {
-      background: var(--gray-100);
+      background: var(--iptalons-green);
     }
 
     .data-table th {
-      padding: 1rem;
+      padding: 0.875rem 1rem;
       text-align: left;
       font-weight: 600;
-      color: var(--navy-dark);
-      border-bottom: 2px solid var(--gray-300);
+      color: var(--white);
+      font-size: 0.875rem;
+      border: none;
     }
 
     .data-table td {
@@ -498,7 +528,7 @@ export const dashboardHTML = `<!DOCTYPE html>
       width: 48px;
       height: 48px;
       border: 4px solid var(--gray-200);
-      border-top-color: var(--navy);
+      border-top-color: var(--iptalons-green);
       border-radius: 50%;
       animation: spin 1s linear infinite;
       margin: 0 auto 1rem;
@@ -541,12 +571,25 @@ export const dashboardHTML = `<!DOCTYPE html>
     }
 
     /* Responsive */
-    @media (max-width: 768px) {
-      .charts-grid {
-        grid-template-columns: 1fr;
+    @media (max-width: 1024px) {
+      .main-layout {
+        flex-direction: column;
       }
 
-      .search-form {
+      .sidebar {
+        width: 100%;
+        position: relative;
+        height: auto;
+        top: 0;
+      }
+
+      .nav-menu {
+        display: none;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .charts-grid {
         grid-template-columns: 1fr;
       }
 
@@ -555,13 +598,16 @@ export const dashboardHTML = `<!DOCTYPE html>
       }
 
       .header-content {
-        flex-direction: column;
+        flex-wrap: wrap;
         gap: 1rem;
-        align-items: flex-start;
       }
 
       .container {
         padding: 1rem;
+      }
+
+      .page-title h1 {
+        font-size: 1.5rem;
       }
     }
 
@@ -576,29 +622,35 @@ export const dashboardHTML = `<!DOCTYPE html>
   <header class="header">
     <div class="header-content">
       <div class="logo-section">
-        <div class="logo-placeholder">
-          <img src="https://images.squarespace-cdn.com/content/v1/64f7594469971a2373540cad/f7dccc87-2458-4b9d-a545-8bd39e2c6874/IPTalonsLogo.png"
-               alt="IP Talons"
-               style="max-width: 100%; max-height: 100%; object-fit: contain;"
-               onerror="this.style.display='none'; this.parentElement.textContent='IP TALONS'">
-        </div>
-        <div>
-          <div class="header-title">Critical Tech Tracker</div>
-          <div class="header-subtitle">US-China Research Intelligence Dashboard</div>
-        </div>
+        <img src="https://images.squarespace-cdn.com/content/v1/64f7594469971a2373540cad/f7dccc87-2458-4b9d-a545-8bd39e2c6874/IPTalonsLogo.png"
+             alt="IPTalons"
+             class="logo-img"
+             onerror="this.onerror=null; this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 150 40%22%3E%3Ctext x=%2210%22 y=%2228%22 font-family=%22Arial%22 font-size=%2220%22 font-weight=%22bold%22 fill=%22%236B9E3E%22%3EIPTalons%3C/text%3E%3C/svg%3E'">
       </div>
+      <nav>
+        <ul class="nav-menu">
+          <li><a href="#home">Home</a></li>
+          <li><a href="#who-we-are">Who We Are</a></li>
+          <li><a href="#services">Services</a></li>
+          <li><a href="#use-cases">Use Cases</a></li>
+          <li><a href="#education">Education</a></li>
+          <li><a href="#insights">Insights</a></li>
+          <li><a href="#contact">Contact</a></li>
+        </ul>
+      </nav>
       <div class="header-actions">
-        <button class="btn btn-secondary" onclick="exportData()">
+        <button class="btn btn-primary" onclick="exportData()">
           <i class="fas fa-download"></i> Export Report
         </button>
       </div>
     </div>
   </header>
 
-  <div class="container">
-    <!-- Filter Panel -->
-    <section class="search-panel">
-      <h3><i class="fas fa-filter"></i> Filter Parameters</h3>
+  <div class="main-layout">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <section class="search-panel">
+        <h3>Search Parameters</h3>
       <form id="searchForm" class="search-form">
         <div class="form-group">
           <label for="sector">Strategic Sector</label>
@@ -628,9 +680,18 @@ export const dashboardHTML = `<!DOCTYPE html>
           </button>
         </div>
       </form>
-    </section>
+      </section>
+    </aside>
 
-    <!-- Executive Summary -->
+    <!-- Main Content -->
+    <main class="container">
+      <!-- Page Title -->
+      <div class="page-title">
+        <h1>Critical Tech Tracker</h1>
+        <p>US-China Research Intelligence Dashboard</p>
+      </div>
+
+      <!-- Executive Summary -->
     <section class="executive-summary hidden" id="executiveSummary">
       <div class="summary-header">
         <div class="summary-title">
@@ -769,6 +830,9 @@ export const dashboardHTML = `<!DOCTYPE html>
     </div>
   </div>
 
+    </main>
+  </div>
+
   <!-- Footer -->
   <footer class="footer">
     <p><strong>Data Source:</strong> OpenAlex API | <strong>Analysis:</strong> Made in China 2025 Strategic Sectors</p>
@@ -889,42 +953,39 @@ export const dashboardHTML = `<!DOCTYPE html>
       const kpis = [
         {
           icon: 'fa-handshake',
-          iconClass: 'blue',
           value: totalCollabs.toLocaleString(),
           label: 'US-China Collaborations',
-          trend: null
+          sublabel: highRiskFunders > 0 ? \`(\${highRiskFunders} High Risk)\` : ''
         },
         {
           icon: 'fa-exclamation-triangle',
-          iconClass: 'red',
           value: data.meta.top_chinese_funders.length,
           label: 'Chinese Funders Identified',
-          trend: highRiskFunders > 0 ? \`\${highRiskFunders} High Risk\` : null
+          sublabel: highRiskFunders > 0 ? \`(\${highRiskFunders} High Risk)\` : ''
         },
         {
           icon: 'fa-industry',
-          iconClass: 'gold',
           value: data.meta.sectors_covered.length,
           label: 'Strategic Sectors',
-          trend: null
+          sublabel: ''
         },
         {
           icon: 'fa-quote-right',
-          iconClass: 'green',
           value: avgCitations.toLocaleString(),
           label: 'Avg. Citations/Paper',
-          trend: \`Total: \${totalCitations.toLocaleString()}\`
+          sublabel: ''
         }
       ];
 
       const kpiHTML = kpis.map(kpi => \`
         <div class="kpi-card">
-          <div class="kpi-icon \${kpi.iconClass}">
+          <div class="kpi-icon">
             <i class="fas \${kpi.icon}"></i>
           </div>
-          <div class="kpi-value">\${kpi.value}</div>
-          <div class="kpi-label">\${kpi.label}</div>
-          \${kpi.trend ? \`<div class="kpi-trend">\${kpi.trend}</div>\` : ''}
+          <div class="kpi-content">
+            <div class="kpi-value">\${kpi.value}</div>
+            <div class="kpi-label">\${kpi.label} \${kpi.sublabel}</div>
+          </div>
         </div>
       \`).join('');
 
@@ -945,10 +1006,11 @@ export const dashboardHTML = `<!DOCTYPE html>
           datasets: [{
             label: 'Collaborations',
             data: trendData.map(t => t.count),
-            borderColor: '#1E3A5F',
-            backgroundColor: 'rgba(30, 58, 95, 0.1)',
+            borderColor: '#6B9E3E',
+            backgroundColor: 'rgba(107, 158, 62, 0.1)',
             tension: 0.4,
-            fill: true
+            fill: true,
+            borderWidth: 3
           }]
         },
         options: {
@@ -983,7 +1045,7 @@ export const dashboardHTML = `<!DOCTYPE html>
           datasets: [{
             label: 'Publications',
             data: topSectors.map(s => s[1]),
-            backgroundColor: '#D4AF37'
+            backgroundColor: '#6B9E3E'
           }]
         },
         options: {
@@ -1012,7 +1074,7 @@ export const dashboardHTML = `<!DOCTYPE html>
           labels: ['High Risk', 'Medium Risk', 'Low Risk'],
           datasets: [{
             data: [riskCounts.high, riskCounts.medium, riskCounts.low],
-            backgroundColor: ['#DC2626', '#EA580C', '#059669']
+            backgroundColor: ['#DC2626', '#EA580C', '#6B9E3E']
           }]
         },
         options: {
@@ -1039,7 +1101,7 @@ export const dashboardHTML = `<!DOCTYPE html>
           datasets: [{
             label: 'Publications',
             data: topInsts.map(i => i[1]),
-            backgroundColor: '#1E3A5F'
+            backgroundColor: '#6B9E3E'
           }]
         },
         options: {
@@ -1091,7 +1153,7 @@ export const dashboardHTML = `<!DOCTYPE html>
           <td><span class="risk-badge risk-\${f.risk}">\${f.risk.toUpperCase()}</span></td>
           <td>\${f.pubs}</td>
           <td>\${f.citations.toLocaleString()}</td>
-          <td><button class="btn btn-secondary" style="padding: 0.25rem 0.75rem; font-size: 0.8rem;">View</button></td>
+          <td><button class="btn btn-action">Action</button></td>
         </tr>
       \`).join('');
 
@@ -1112,7 +1174,7 @@ export const dashboardHTML = `<!DOCTYPE html>
             <td>\${r.work.cited_by_count}</td>
             <td>\${r.collaboration_score}/100</td>
             <td><span class="risk-badge risk-\${highestRisk}">\${highestRisk.toUpperCase()}</span></td>
-            <td><button class="btn btn-secondary" style="padding: 0.25rem 0.75rem; font-size: 0.8rem;">View</button></td>
+            <td><button class="btn btn-action">Action</button></td>
           </tr>
         \`;
       }).join('');
